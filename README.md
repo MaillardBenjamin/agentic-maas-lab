@@ -8,6 +8,10 @@ Résultats et limites : [validation du socle](docs/validation-2026-10-24.md), [t
 
 La coopération avec les partenaires vélo et parking est implémentée : **agent MaaS → A2A → agent partenaire sur un runtime séparé → MCP → service simulé avec état**. Les actions sont confirmées dans l'IHM, liées à une autorisation temporaire et exécutées avec reprise Temporal. Les équipements et opérateurs externes restent simulés. Voir [le fonctionnement et les essais partenaires](docs/partenaires-a2a-2026-10-24.md).
 
+## Comprendre l’architecture
+
+Le [dossier d’architecture de haut niveau](docs/architecture/README.md) présente les principes, les composants et leurs responsabilités, les bénéfices attendus et les compromis. Il contient des diagrammes Mermaid et un glossaire accessible aux lecteurs qui découvrent A2A, MCP, GraphRAG, Temporal ou Anvil. Il distingue le POC actuel des simulations et des extensions futures.
+
 ## Démarrer
 
 Prérequis : Docker avec Compose, `make`, Python 3 pour créer le fichier de configuration. Les essais ont été effectués sur Docker Desktop Apple Silicon ; Linux reste à vérifier. OPA 1.0.1 utilise ici une image amd64 émulée.
@@ -73,7 +77,7 @@ flowchart TB
     UI["Voyageur web/mobile · automate · agence SAV · console"] --> API["FastAPI · identité locale · règles déterministes"]
     UI -. "WebRTC après activation" .-> VOICE["OpenAI Realtime · à valider"]
     VOICE -. "outil via le navigateur" .-> API
-    API -->|"A2A après activation cloud"| ACC["Agent Agno accueil"]
+    API -->|"A2A · Ollama ou OpenAI activé"| ACC["Agent Agno accueil"]
     ACC -->|A2A| TAR["Agent Agno tarifs"]
     API -->|A2A| SAV["Agent Agno SAV"]
     API -->|A2A| CLEAR["Agent Agno commissions"]
@@ -100,7 +104,7 @@ flowchart TB
     LAB["Harness² Google · conteneur isolé"] -. "rapports hors production" .-> ART["artifacts/harness2"]
 ```
 
-Les agents n'ont aucun outil d'achat, débit ou remboursement. Leurs outils lisent les API métier avec le JWT du demandeur. Temporal conserve les opérations longues ; AgentOS expose Agno et A2A, sans planificateur concurrent. Les tests de protocole courants utilisent un **double déterministe de modèle** ; les commandes `test-live-local` et `test-live-openai` vérifient séparément les modèles réels. Les réponses indiquent le fournisseur, le modèle et les outils MCP réellement exécutés, y compris ceux appelés par l'agent délégué.
+Les agents d’accueil, tarifs, SAV et commissions n’ont aucun outil d’achat, débit ou remboursement. Leurs outils lisent les API métier avec le JWT du demandeur. Temporal conserve les opérations longues ; AgentOS expose Agno et A2A, sans planificateur concurrent. Les tests de protocole courants utilisent un **double déterministe de modèle** ; les commandes `test-live-local` et `test-live-openai` vérifient séparément les modèles réels. Les réponses indiquent le fournisseur, le modèle et les outils MCP réellement exécutés, y compris ceux appelés par l'agent délégué.
 
 Les agents partenaires disposent en plus d'outils de réservation et d'usage simulés, limités à une action préalablement confirmée. Un jeton signé de dix minutes lie l'opération, le voyageur, l'organisation, le partenaire, l'action et le fournisseur IA. Le modèle ne reçoit ni le jeton ni la possibilité de modifier la durée ou la commande. Avant toute écriture, le runtime impose une lecture MCP de disponibilité. Le stock, la transition d'état, le reçu et l'événement de fin d'usage sont enregistrés dans une transaction. Les notifications manuelles de la console et les partenaires partagent le même registre CloudEvents.
 
@@ -137,11 +141,11 @@ Le fournisseur Agno est `Ollama`, avec réflexion désactivée pour ces essais, 
 
 `AI_MONTHLY_BUDGET_EUR=50` limite des réservations conservatrices : 1 € par demande textuelle, 3 € par démarrage vocal, plus les demandes métier vocales. Elles sont sérialisées dans PostgreSQL. Ce compteur n'est ni la facture OpenAI ni une garantie absolue sur son montant ; la durée du navigateur et l'expiration d'un jeton ne constituent pas une limite fournisseur de dépense.
 
-Pour Bridge : `BRIDGE_CLIENT_ID` et `BRIDGE_CLIENT_SECRET` **sandbox**, `BRIDGE_ENABLED=true`, `BRIDGE_CALLBACK_URL` accepté par Bridge. Le parcours testé utilise `BRIDGE_FLOW=payment_link` et `BRIDGE_BENEFICIARY_MODE=default` : le bénéficiaire configuré dans le compte Bridge est repris, sans IBAN transmis dans la demande. Ce compte refuse la création directe de payment requests et les bénéficiaires dynamiques. Le connecteur sélectionne Demo Bank (`574`) et refuse des identifiants de production. Le frontal propose alors le choix Bridge lors de la confirmation. Les liens du POC expirent après une heure.
+Pour Bridge : `BRIDGE_CLIENT_ID` et `BRIDGE_CLIENT_SECRET` **sandbox**, `BRIDGE_ENABLED=true`, `BRIDGE_CALLBACK_URL` accepté par Bridge. Le parcours testé utilise `BRIDGE_FLOW=payment_link` et `BRIDGE_BENEFICIARY_MODE=default` : le bénéficiaire configuré dans le compte Bridge est repris, sans IBAN transmis dans la demande. Ce compte refuse la création directe de payment requests et les bénéficiaires dynamiques. Le connecteur sélectionne Demo Bank (`574`) et refuse des identifiants de production. Le frontal propose alors le choix Bridge lors de la confirmation. Les liens expirent après une heure dans le parcours web et dix minutes sur la borne.
 
 Le retour du navigateur ne confirme jamais le paiement. Le serveur retrouve la payment request liée au lien, puis vérifie montant, EUR et référence de commande ; seul `ACSC` sur la demande et sa transaction déverrouille l'émission. Une création dont la réponse est perdue passe en rapprochement, sans second POST automatique. Un refus HTTP explicite de création est conservé avec son code, sans être assimilé à un paiement incertain. Plusieurs tentatives bancaires sur un même lien exigent un rapprochement manuel dans cette version.
 
-Le test complet a confirmé 12 € fictifs, un seul paiement comptabilisé et un seul chargement Keyple, y compris après répétition des contrôles. Le relevé répartit 0,60 € de commission et 11,40 € pour les opérateurs ; il n'exécute aucun reversement. Ce test utilise la **relecture serveur à la demande**, pas des notifications publiques. Pour les notifications, configurer `BRIDGE_WEBHOOK_SECRET` et une URL joignable vers `/api/webhooks/bridge` ; la signature sur corps brut et le routage lien/demande sont testés localement, mais la réception depuis Bridge reste à éprouver. Le remboursement bancaire et l'encaissement postpayé ne sont pas implémentés. TrueLayer reste une alternative prévue.
+Le test complet a confirmé 12 € fictifs, un seul paiement comptabilisé et un seul chargement Keyple, y compris après répétition des contrôles. Le relevé répartit 0,60 € de commission et 11,40 € pour les opérateurs ; il n'exécute aucun reversement. Le test web utilise la **relecture serveur à la demande** ; la borne ajoute une surveillance Temporal bornée à quinze minutes. Aucun de ces parcours ne repose sur des notifications publiques. Pour les notifications, configurer `BRIDGE_WEBHOOK_SECRET` et une URL joignable vers `/api/webhooks/bridge` ; la signature sur corps brut et le routage lien/demande sont testés localement, mais la réception depuis Bridge reste à éprouver. Le remboursement bancaire et l'encaissement postpayé ne sont pas implémentés. TrueLayer reste une alternative prévue.
 
 Sources : [premier paiement Bridge](https://docs.bridgeapi.io/docs/initiate-your-first-payment-1), [Demo Bank](https://docs.bridgeapi.io/docs/testing-your-payment-flow), [signature des notifications](https://docs.bridgeapi.io/docs/secure-your-webhooks), [Realtime OpenAI](https://developers.openai.com/api/reference/resources/realtime/subresources/client_secrets/methods/create).
 
