@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "mode": "fixture-no-llm",
+  "three_concurrent_requests": 3,
+  "resources": 2,
+  "successful_reservations": 2,
+  "refusals": 1,
+  "distinct_resources": true,
+  "refused_request_resumed_after_stock_released": true,
+  "resume_requires_confirmation_and_owner_access": true,
+  "stock_restored_after_cancellation": true
+}

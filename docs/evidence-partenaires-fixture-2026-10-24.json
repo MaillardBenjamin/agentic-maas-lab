@@ -1,0 +1,155 @@
+{
+  "status": "passed",
+  "mode": "fixture",
+  "order_id": "order-fb832fe99e3558b668f3a3457b02323e",
+  "operations": [
+    {
+      "operation_id": "partner-op-712eeeeade7733a5a60e3afc9c1969d63a38abd367e6401f06630b5878d1334a",
+      "partner": "bike",
+      "action": "reserve",
+      "mode": "fixture-no-llm",
+      "model": "fixture-no-llm",
+      "state": "reserved",
+      "evidence": {
+        "a2a_agents": [
+          "mobility",
+          "bike"
+        ],
+        "mcp_tools": [
+          "bike_apply",
+          "bike_availability"
+        ],
+        "partner_runtime": "separate",
+        "business_result_verified": true
+      },
+      "elapsed_ms": 1048
+    },
+    {
+      "operation_id": "partner-op-8f1a727c9b1cd42ae8cb6f618259364c48eca4b01293bf23bb78a6617bcb8f7e",
+      "partner": "bike",
+      "action": "start",
+      "mode": "fixture-no-llm",
+      "model": "fixture-no-llm",
+      "state": "active",
+      "evidence": {
+        "a2a_agents": [
+          "mobility",
+          "bike"
+        ],
+        "mcp_tools": [
+          "bike_apply",
+          "bike_availability"
+        ],
+        "partner_runtime": "separate",
+        "business_result_verified": true
+      },
+      "elapsed_ms": 1029
+    },
+    {
+      "operation_id": "partner-op-4396bfa292246fc2be934e7635fd8367c9fd769354701829b295fef8792c5de2",
+      "partner": "bike",
+      "action": "finish",
+      "mode": "fixture-no-llm",
+      "model": "fixture-no-llm",
+      "state": "completed",
+      "evidence": {
+        "a2a_agents": [
+          "mobility",
+          "bike"
+        ],
+        "mcp_tools": [
+          "bike_apply",
+          "bike_availability"
+        ],
+        "partner_runtime": "separate",
+        "business_result_verified": true
+      },
+      "elapsed_ms": 1036
+    },
+    {
+      "operation_id": "partner-op-f93ecdc896119a5a0dbbeab5acd4505648d52487b65a795c95d22f484a7a3a59",
+      "partner": "parking",
+      "action": "reserve",
+      "mode": "fixture-no-llm",
+      "model": "fixture-no-llm",
+      "state": "reserved",
+      "evidence": {
+        "a2a_agents": [
+          "mobility",
+          "parking"
+        ],
+        "mcp_tools": [
+          "parking_apply",
+          "parking_availability"
+        ],
+        "partner_runtime": "separate",
+        "business_result_verified": true
+      },
+      "elapsed_ms": 1027
+    },
+    {
+      "operation_id": "partner-op-b17aa9318d9748615ebb69dc63fdc7f881ee635c4b534aca487e73e945a612ee",
+      "partner": "parking",
+      "action": "start",
+      "mode": "fixture-no-llm",
+      "model": "fixture-no-llm",
+      "state": "active",
+      "evidence": {
+        "a2a_agents": [
+          "mobility",
+          "parking"
+        ],
+        "mcp_tools": [
+          "parking_apply",
+          "parking_availability"
+        ],
+        "partner_runtime": "separate",
+        "business_result_verified": true
+      },
+      "elapsed_ms": 1033
+    },
+    {
+      "operation_id": "partner-op-e151b51e8310e550b8078c2e0a53e39c06fbbe2c24e940924d3938a436fc0673",
+      "partner": "parking",
+      "action": "finish",
+      "mode": "fixture-no-llm",
+      "model": "fixture-no-llm",
+      "state": "completed",
+      "evidence": {
+        "a2a_agents": [
+          "mobility",
+          "parking"
+        ],
+        "mcp_tools": [
+          "parking_apply",
+          "parking_availability"
+        ],
+        "partner_runtime": "separate",
+        "business_result_verified": true
+      },
+      "elapsed_ms": 1029
+    }
+  ],
+  "stock_restored": true,
+  "duplicate_events_without_second_charge": true,
+  "unscoped_tools_refused": true,
+  "cross_traveler_refused": true,
+  "confirmation_required": true,
+  "payment_count": 1,
+  "card_load_count": 1,
+  "statement": {
+    "prepaid_cents": 1200,
+    "refund_cents": 0,
+    "net_prepaid_cents": 1200,
+    "seller_commission_cents": 60,
+    "operators_cents": 1140,
+    "bike_due_cents": 300,
+    "bike_commission_pending_cents": 15,
+    "bike_operator_pending_cents": 285,
+    "currency": "EUR",
+    "note": "Vélo : créance simulée non encore encaissée ; aucun reversement bancaire réel.",
+    "order_id": "order-fb832fe99e3558b668f3a3457b02323e",
+    "parking_adjustment_available_cents": 0,
+    "events_count": 2
+  }
+}

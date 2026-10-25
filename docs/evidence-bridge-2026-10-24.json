@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "order_id": "order-6eff2bd926743a200ec38aca2b56120a",
+  "bank_payment_id": "01a16ef5-48cb-7a92-a13b-76a09156fc5b",
+  "bank_request_id": "01a16ef555dd7e94b6cd5c4b46a3e13b",
+  "bank_status": "ACSC",
+  "amount_cents": 1200,
+  "order_state": "fulfilled",
+  "payment_count": 1,
+  "card_load_count": 1,
+  "keyple_read_after_write": true,
+  "replayed_polling_without_second_effect": true,
+  "statement": {
+    "prepaid_cents": 1200,
+    "refund_cents": 0,
+    "net_prepaid_cents": 1200,
+    "seller_commission_cents": 60,
+    "operators_cents": 1140,
+    "bike_due_cents": 0,
+    "bike_commission_pending_cents": 0,
+    "bike_operator_pending_cents": 0,
+    "currency": "EUR",
+    "note": "Vélo : créance simulée non encore encaissée ; aucun reversement bancaire réel.",
+    "order_id": "order-6eff2bd926743a200ec38aca2b56120a",
+    "parking_adjustment_available_cents": 0,
+    "events_count": 0
+  }
+}

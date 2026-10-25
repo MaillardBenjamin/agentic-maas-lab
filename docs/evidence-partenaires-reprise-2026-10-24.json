@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "mode": "fixture-no-llm",
+  "queued_while_worker_stopped": true,
+  "a2a_mcp_resumed": true,
+  "reservation_effect_count": 1,
+  "reservation_cancelled_after_test": true
+}

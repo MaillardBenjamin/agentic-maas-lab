@@ -1,0 +1,28 @@
+{
+  "order_id": "order-4d9c89fbe1168ce086a2f38f52d317dc",
+  "channel": "automate",
+  "amount_cents": 1200,
+  "state": "fulfilled",
+  "payment_count": 1,
+  "bridge": {
+    "id": "01a171d6-a70c-704a-8686-ae0e7cbbd4d6",
+    "provider_status": "ACSC",
+    "link_status": "completed",
+    "expires_at": "2026-10-25T07:04:15Z",
+    "checked_at": "2026-10-25T06:57:38.277178+00:00"
+  },
+  "card": {
+    "load_count": 1,
+    "mode": "real_sdk_stub_card",
+    "operation_id": "order-4d9c89fbe1168ce086a2f38f52d317dc",
+    "order_id": "order-4d9c89fbe1168ce086a2f38f52d317dc",
+    "reconciled": false,
+    "sdk": {
+      "mode": "real_sdk_stub_card",
+      "sdk": "Eclipse Keyple",
+      "serial": "00000000AABBCCDD",
+      "verified_read_after_write": true
+    }
+  },
+  "internal_endpoint_protected": true
+}

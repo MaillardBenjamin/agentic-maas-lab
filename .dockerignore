@@ -1,0 +1,10 @@
+.env
+**/.env*
+.git
+node_modules
+**/node_modules
+**/dist
+**/__pycache__
+artifacts
+data
+lab/harness2/vendor

@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "order_id": "order-a77ab54ffa5719eba5008672ea79674b",
+  "traveler": "lea",
+  "channel": "automate",
+  "payment_mode": "local_simulator",
+  "amount_cents": 1200,
+  "state": "fulfilled",
+  "payment_count": 1,
+  "card_load_count": 1,
+  "keyple_read_after_write": true
+}

@@ -1,0 +1,245 @@
+name: maas-agentique
+x-app: &app
+  build:
+    context: .
+    dockerfile: services/api/Dockerfile
+  image: maas-demo-api:0.1.0
+  environment: &env
+    DATABASE_URL: postgresql+psycopg://maas:${POSTGRES_PASSWORD:-local-maas-only}@postgres/maas
+    JWT_SECRET: ${JWT_SECRET:-local-demo-change-before-exposure-0123456789}
+    SERVICE_TOKEN: ${SERVICE_TOKEN:-local-services-only-0123456789}
+    TEMPORAL_ADDRESS: temporal:7233
+    OPA_URL: http://opa:8181
+    FALKOR_HOST: falkor
+    API_URL: http://api:8000
+    CARD_URL: http://simulator:8001
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: maas
+      POSTGRES_USER: maas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-maas-only}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U maas -d maas"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  temporal:
+    image: temporalio/auto-setup:1.29.1
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: maas
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-local-maas-only}
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    volumes:
+      - ./infra/temporal-dynamic.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:7233:7233
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:5190
+    ports:
+      - 127.0.0.1:8088:8080
+    depends_on: [temporal]
+  falkor:
+    image: falkordb/falkordb:v4.20.3
+    volumes:
+      - falkor:/var/lib/falkordb/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  opa:
+    image: openpolicyagent/opa:1.0.1
+    platform: linux/amd64
+    command: [run, --server, --addr=0.0.0.0:8181, /policies/maas.rego]
+    volumes:
+      - ./policies:/policies:ro
+  api:
+    <<: *app
+    environment:
+      <<: *env
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AGENT_MODE: ${AGENT_MODE:-disabled}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6-luna}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
+      AI_MONTHLY_BUDGET_EUR: ${AI_MONTHLY_BUDGET_EUR:-50}
+      BRIDGE_CLIENT_ID: ${BRIDGE_CLIENT_ID:-}
+      BRIDGE_CLIENT_SECRET: ${BRIDGE_CLIENT_SECRET:-}
+      BRIDGE_WEBHOOK_SECRET: ${BRIDGE_WEBHOOK_SECRET:-}
+      BRIDGE_ENABLED: ${BRIDGE_ENABLED:-false}
+      BRIDGE_FLOW: ${BRIDGE_FLOW:-payment_link}
+      BRIDGE_BENEFICIARY_MODE: ${BRIDGE_BENEFICIARY_MODE:-default}
+      BRIDGE_BENEFICIARY_IBAN: ${BRIDGE_BENEFICIARY_IBAN:-}
+      BRIDGE_CALLBACK_URL: ${BRIDGE_CALLBACK_URL:-http://localhost:5190}
+    ports:
+      - 127.0.0.1:8000:8000
+    volumes:
+      - proofs:/proofs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      falkor:
+        condition: service_healthy
+      opa:
+        condition: service_started
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - 127.0.0.1:5190:5173
+    depends_on:
+      api:
+        condition: service_healthy
+  worker:
+    <<: *app
+    command: [python, -m, worker.main]
+    environment:
+      <<: *env
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
+    depends_on:
+      api:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+  simulator:
+    <<: *app
+    command: [uvicorn, maas.simulator:app, --host, 0.0.0.0, --port, "8001"]
+    environment:
+      <<: *env
+      CARD_DB: /data/card.db
+      KEYPLE_URL: http://keyple:8004
+    volumes:
+      - cards:/data
+    depends_on: [keyple]
+  keyple:
+    build:
+      context: .
+      dockerfile: services/keyple/Dockerfile
+    image: maas-demo-keyple:0.1.0
+  agents:
+    build:
+      context: .
+      dockerfile: services/agents/Dockerfile
+    image: maas-demo-agents:0.1.0
+    environment: &agent-env
+      JWT_SECRET: ${JWT_SECRET:-local-demo-change-before-exposure-0123456789}
+      API_URL: http://api:8000
+      AGENT_MODE: ${AGENT_MODE:-disabled}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6-luna}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
+      OLLAMA_API_KEY: ""
+      AGNO_TELEMETRY: "false"
+    depends_on: [api, mcp, partners]
+  partners:
+    image: maas-demo-agents:0.1.0
+    environment:
+      <<: *agent-env
+      AGENT_RUNTIME: partners
+    depends_on: [api, partner-mcp]
+  partner-mcp:
+    image: maas-demo-agents:0.1.0
+    command: [python, partner_mcp_server.py]
+    environment:
+      API_URL: http://api:8000
+    depends_on: [api]
+  mcp:
+    image: maas-demo-agents:0.1.0
+    command: [python, mcp_server.py]
+    environment:
+      API_URL: http://api:8000
+    depends_on: [api]
+  agent-fixture:
+    image: maas-demo-agents:0.1.0
+    profiles: [tests]
+    environment:
+      <<: *agent-env
+      AGENT_MODE: fixture
+      A2A_BASE_URL: http://agent-fixture:8002
+      PARTNER_A2A_BASE_URL: http://partners-fixture:8002
+      OPENAI_API_KEY: ""
+    depends_on: [api, mcp, partners-fixture]
+  partners-fixture:
+    image: maas-demo-agents:0.1.0
+    profiles: [tests]
+    environment:
+      <<: *agent-env
+      AGENT_MODE: fixture
+      AGENT_RUNTIME: partners
+      OPENAI_API_KEY: ""
+    depends_on: [api, partner-mcp]
+  otel:
+    image: otel/opentelemetry-collector-contrib:0.128.0
+    command: [--config=/etc/otel.yaml]
+    volumes:
+      - ./infra/otel/collector.yaml:/etc/otel.yaml:ro
+  jaeger:
+    image: jaegertracing/all-in-one:1.68.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - 127.0.0.1:16686:16686
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:v1.3.1
+    user: "0:0"
+    profiles: [proofs]
+    entrypoint: [anvil]
+    command: [--host, 0.0.0.0, --state, /data/chain.json, --state-interval, "1"]
+    volumes:
+      - chain:/data
+    healthcheck:
+      test: [CMD, cast, block-number, --rpc-url, "http://127.0.0.1:8545"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+  contracts:
+    image: ghcr.io/foundry-rs/foundry:v1.3.1
+    profiles: [proofs]
+    working_dir: /contracts
+    user: "0:0"
+    entrypoint: [forge]
+    command: [test, -vv]
+    volumes:
+      - ./contracts/proofs:/contracts
+  harness2:
+    profiles: [lab]
+    build:
+      context: .
+      dockerfile: lab/harness2/Dockerfile
+    image: maas-demo-harness2:0.1.0
+    network_mode: none
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - ./artifacts:/artifacts
+volumes:
+  postgres:
+  falkor:
+  cards:
+  chain:
+  proofs:

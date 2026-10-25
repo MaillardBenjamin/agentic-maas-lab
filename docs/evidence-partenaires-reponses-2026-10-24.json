@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "order_id": "order-1a9f38295c9162b9f6265d9b6a522733",
+  "history_only_agent_replies_displayable": true,
+  "stock_restored": true,
+  "operations": [
+    {
+      "action": "reserve",
+      "operation_id": "partner-op-57f8c995bc20f30ec387f6429c6036d6a2cb9027e4893892b5a0bbf8b1ead46a",
+      "agent_reply": "La réservation de vélo a été déléguée au partenaire bike et a été confirmée avec succès. L'ID de réservation est `partner-booking-fb1d5a25ae818523583d2b84236ac0085195c7b29b5d4bcc2bd51a6d907aa18b`.",
+      "mode": "ollama_local",
+      "attempts": 1,
+      "effect_count": 1
+    },
+    {
+      "action": "cancel",
+      "operation_id": "partner-op-761071ee16d3cdd075c16222ec838c47d288386cec4f90d4839e57b54cc26126",
+      "agent_reply": "L'opération a été annulée avec succès : `partner-booking-fb1d5a25ae818523583d2b84236ac0085195c7b29b5d4bcc2bd51a6d907aa18b`.",
+      "mode": "ollama_local",
+      "attempts": 3,
+      "effect_count": 1
+    }
+  ]
+}
