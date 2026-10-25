@@ -58,7 +58,7 @@ Les appels partenaires du schéma ne sont possibles que pour une action confirm�
 | Partenaires | Coopération A2A/MCP réelle, stocks et usages vélo/parking fictifs avec état ; aucun opérateur externe connecté. |
 | Validations | Événements de fabricants X/Y simulés ; contrôles et déduplication côté service. |
 | Blockchain | Ancrage réel sur une chaîne Anvil locale de développement ; aucune chaîne partagée entre autorités indépendantes. |
-| Extensions | Piscine, théâtre, portefeuille territorial, contrat étudiant et douze échéances : **projets futurs**, non implémentés. |
+| Extensions | Services locaux (théâtre, piscine, bibliothèque), portefeuille territorial, contrat étudiant et douze échéances : **projets futurs**, non implémentés. |
 
 La voix dispose d’un adaptateur expérimental ; l’audio et ses latences restent à éprouver. Le panier préparé directement par le dialogue, l’identité numérique nationale et la vérification de justificatifs réels ne sont pas réalisés. La lecture labiale est un axe futur. Harness² reste un laboratoire isolé, hors parcours de vente.
 

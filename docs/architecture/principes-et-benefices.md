@@ -56,7 +56,7 @@ Un lot d’événements peut ensuite être résumé dans un manifeste signé Ed2
 
 | Évolution | Socle que l’on cherche à réutiliser | Travail qui resterait nécessaire |
 |---|---|---|
-| Ajouter une piscine | Vente, paiement, devis, commissions et suivi. | Produit, règles, opérateur, délivrance et contrôle d’entrée. |
+| Ajouter un service local : théâtre, piscine, bibliothèque… | Catalogue, droits, suivi et, si le service est payant, vente, devis, paiement et commissions. | Offre, règles d’accès, opérateur, délivrance et contrôle adapté au service. |
 | Remplacer un partenaire | Interface de coopération et service métier. | Adaptateur, erreurs propres au fournisseur et tests de conformité. |
 | Changer de modèle IA | Services et règles métier. | Compatibilité des outils, qualité des réponses, coûts et délais. |
 | Ajouter un abonnement | Identités, commandes, paiement et Temporal. | Contrat, échéancier, autorisation récurrente et gestion des incidents. |

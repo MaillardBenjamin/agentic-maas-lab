@@ -42,23 +42,23 @@ L’article présente le socle existant, ses frontières et un parcours reproduc
 
 **Question à résoudre :** quelles responsabilités sont réellement séparées, et où subsistent des dépendances fortes ?
 
-### Article 2 — Ajouter une piscine à une plateforme de mobilité
+### Article 2 — Ajouter un service local à une plateforme de mobilité
 
-**Besoin :** vendre une entrée piscine seule ou dans une offre avec transport et parking.
+**Besoin :** intégrer un service local — théâtre, piscine, bibliothèque ou autre équipement de proximité — seul ou dans un parcours comprenant transport et parking.
 
-L’extension reste volontairement limitée à une entrée, sans créneau ni réservation complexe. Elle ajoute un produit, un opérateur fictif, ses tarifs, ses conditions d’accès et son mode de délivrance. Un contrôle d’entrée est simulé.
+L’extension ajoute une offre, un opérateur fictif, ses éventuels tarifs, ses conditions d’accès et son mode de délivrance. Les exemples possibles sont un billet de théâtre, une entrée piscine ou une inscription à la bibliothèque. Le service peut être payant ou gratuit : la réutilisation ne se limite pas au paiement. Pour garder une démonstration maîtrisée, un seul service et un seul type de droit seront retenus lors de la réalisation, sans placement en salle, créneau complexe ni gestion complète des prêts.
 
-Le panier, le paiement, les commissions et le SAV doivent être réutilisés autant que possible. Cette réutilisation est un objectif à vérifier, pas un résultat acquis. Le support du ticket est à choisir explicitement : QR code dédié ou droit sur une carte compatible ; la compatibilité matérielle ne sera pas présumée.
+Le panier, le paiement, les commissions et le SAV doivent être réutilisés autant que possible. Cette réutilisation est un objectif à vérifier, pas un résultat acquis. Le support du droit est à choisir explicitement : QR code dédié ou droit sur une carte compatible ; la compatibilité matérielle ne sera pas présumée. Une entrée piscine peut servir d’exemple concret, sans définir à elle seule le périmètre de l’article.
 
-Un agent partenaire Piscine peut exposer une coopération A2A et accéder au service métier par MCP. Son utilité doit être explicitée ; la disponibilité, les droits et la consommation du ticket restent sous contrôle déterministe du service métier.
+Un agent du partenaire local retenu peut exposer une coopération A2A et accéder au service métier par MCP. Son utilité doit être explicitée ; la disponibilité, les droits et leur utilisation restent sous contrôle déterministe du service métier.
 
-**Preuves attendues :** diff par rapport à la version de départ, liste des composants réutilisés et modifiés, tests de vente et de contrôle, vérification de la répartition par opérateur et absence de régression sur les offres existantes.
+**Preuves attendues :** diff par rapport à la version de départ, liste des composants réutilisés et modifiés, tests d’attribution ou de vente et de contrôle, vérification de la répartition par opérateur lorsque le service est payant et absence de régression sur les offres existantes.
 
 **Question à résoudre :** l’architecture accepte-t-elle un nouveau métier, ou contient-elle encore des hypothèses propres au transport ?
 
 ### Article 3 — Une même offre, plusieurs points de vente
 
-**Besoin :** vendre l’entrée piscine depuis le site, la borne et l’agence.
+**Besoin :** distribuer l’offre du service local retenu dans l’article précédent depuis le site, la borne et l’agence.
 
 L’article examine la séparation entre interfaces et fonctions métier. Les canaux partagent les règles et les services, tout en conservant une expérience, une identité vendeur, une commission et des habilitations adaptées.
 
@@ -72,7 +72,7 @@ L’article examine la séparation entre interfaces et fonctions métier. Les ca
 
 **Besoin :** remplacer un connecteur partenaire par une seconde implémentation respectant le même contrat.
 
-Pour garder un périmètre maîtrisé, le premier exemple peut porter sur le contrôle d’entrée piscine. Deux fournisseurs fictifs peuvent utiliser des formats et des comportements différents, derrière des adaptateurs vers le même service métier. Cette démonstration ne sera pas présentée comme une intégration à deux fabricants réels.
+Pour garder un périmètre maîtrisé, le premier exemple peut porter sur le contrôle d’accès au service local retenu, par exemple le contrôle d’entrée d’une piscine. Deux fournisseurs fictifs peuvent utiliser des formats et des comportements différents, derrière des adaptateurs vers le même service métier. Cette démonstration ne sera pas présentée comme une intégration à deux fabricants réels.
 
 **Démonstration :** sélectionner le second connecteur et rejouer les scénarios fonctionnels, y compris une indisponibilité et un doublon.
 
@@ -174,9 +174,9 @@ Les articles pourront renvoyer au même code original sous licence MIT. Les dép
 
 ## 7. La prochaine étape recommandée
 
-Commencer par figer le socle et rédiger le premier article à partir des preuves disponibles. Ajouter ensuite la piscine en tenant le journal des adaptations dès le début de l’implémentation.
+Commencer par figer le socle et rédiger le premier article à partir des preuves disponibles. Ajouter ensuite un service local — théâtre, piscine ou bibliothèque, par exemple — en tenant le journal des adaptations dès le début de l’implémentation.
 
-L’abonnement étudiant reste un épisode ultérieur : il introduit simultanément signature, autorisation bancaire et cycle de vie contractuel. L’extension piscine constitue un premier test plus ciblé de la capacité à accueillir un nouveau partenaire et un nouveau produit.
+L’abonnement étudiant reste un épisode ultérieur : il introduit simultanément signature, autorisation bancaire et cycle de vie contractuel. L’ajout d’un service local constitue un premier test plus ciblé de la capacité à accueillir un nouveau partenaire et un nouveau produit.
 
 Le portefeuille territorial constitue un épisode futur supplémentaire, après les premières extensions multiservices. Sa présence dans ce document ne vaut pas lancement de son implémentation.
 
