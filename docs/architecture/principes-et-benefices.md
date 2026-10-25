@@ -18,6 +18,8 @@ Le prix, les réductions, les arrondis, les transitions d’état et les droits 
 | **MCP — Model Context Protocol** | Quel outil peut être appelé, avec quelles entrées et quel résultat ? | L’agent tarifaire consulte le catalogue par un outil de lecture. |
 | **Temporal — workflow durable** | Où en est l’opération et comment reprendre après une interruption ? | Attendre la confirmation bancaire puis reprendre la délivrance. |
 
+Le [chapitre Temporal](temporal.md) définit workflow, activité, worker, file de tâches, signal, minuterie, historique et reprise.
+
 Ces mécanismes se complètent. Un échange A2A ou un appel MCP ne garantit pas à lui seul une opération durable, une autorisation ou l’absence de doublon.
 
 ## 3. Partager le socle entre les canaux
@@ -46,9 +48,9 @@ Le catalogue structuré du dépôt alimente les calculs et sa projection dans le
 
 Une fin de location ou une validation est un événement. CloudEvents fournit une enveloppe commune ; le contenu métier et les règles d’acceptation restent définis par le projet. Les doublons et contradictions sont contrôlés par le service.
 
-Un lot d’événements peut ensuite être résumé dans un manifeste signé Ed25519, dont l’empreinte est ancrée sur Anvil par Temporal. L’ancrage ne conditionne pas l’acceptation d’une validation.
+Un lot d’événements peut ensuite être résumé dans un manifeste signé Ed25519, dont l’empreinte est ancrée sur la blockchain Ethereum locale **Anvil**, par Temporal. L’ancrage ne conditionne pas l’acceptation d’une validation.
 
-**Bénéfice :** disposer d’une référence pour détecter l’altération d’un lot. **Limite :** cela ne prouve ni la réalité d’un passage ni l’identité d’un voyageur. Une chaîne locale réinitialisable n’offre pas les garanties d’un registre gouverné par plusieurs acteurs indépendants.
+**Bénéfice :** disposer d’une référence pour détecter l’altération d’un lot. Dans une architecture cible partagée entre opérateurs indépendants, un registre commun pourrait aussi faciliter la comparaison de leurs preuves et les rapprochements. Le [chapitre blockchain](blockchain-et-anvil.md) distingue ces bénéfices attendus de ce que démontre Anvil local. **Limite :** cela ne prouve ni la réalité d’un passage ni l’identité d’un voyageur. Une chaîne locale réinitialisable n’offre pas les garanties d’un registre gouverné par plusieurs acteurs indépendants.
 
 ## Ce que la souplesse et l’agilité apporteraient
 

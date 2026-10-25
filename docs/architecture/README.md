@@ -19,6 +19,8 @@ Le qualificatif **agentique** désigne l’intervention d’agents IA spécialis
 | [Principes et bénéfices](principes-et-benefices.md) | Pourquoi séparer compréhension, calcul, exécution et reprise ; bénéfices attendus et contreparties. |
 | [Composants et responsabilités](composants.md) | Le rôle de chaque logiciel, les données qu’il porte et ses limites. |
 | [Parcours et échanges](parcours.md) | Comment une demande circule entre interface, agents, outils, paiement et délivrance. |
+| [Temporal : coordonner et reprendre](temporal.md) | Les workflows, activités, workers, signaux, délais et reprises, à partir du paiement du POC. |
+| [Blockchain et Anvil : conserver des preuves](blockchain-et-anvil.md) | Le mécanisme d’ancrage, ses bénéfices entre partenaires et les limites de la chaîne locale. |
 | [Glossaire](glossaire.md) | A2A, MCP, API, GraphRAG, workflow, idempotence, blockchain et autres notions. |
 
 Pour une première lecture : commencer par la vue ci-dessous, puis les principes. Les détails de déploiement restent dans le [README du projet](../../README.md).
@@ -33,10 +35,10 @@ flowchart TB
     API <-->|"A2A : demandes<br/>MCP : outils via API"| IA["Agents IA Agno / AgentOS<br/>MaaS et partenaires vélo / parking"]
     API --> DATA[("Données<br/>PostgreSQL : états et audit<br/>FalkorDB : offres et sources")]
     API --> OPA["OPA<br/>Autorisations SAV"]
-    API --> T["Temporal et worker<br/>Attentes et reprises"]
+    API --> T["Temporal et worker<br/>Orchestration durable et reprises"]
     T --> EXT["Intégrations via API / adaptateurs<br/>Bridge sandbox<br/>Keyple sur carte simulée"]
     API -->|"Lien et statut bancaire"| EXT
-    T --> PROOF["Preuves via API interne<br/>Anvil local"]
+    T --> PROOF["Preuves via API interne<br/>Blockchain Ethereum locale : Anvil"]
     API -.-> OBS["OpenTelemetry / Jaeger<br/>Traces techniques"]
     T -.-> OBS
 ```

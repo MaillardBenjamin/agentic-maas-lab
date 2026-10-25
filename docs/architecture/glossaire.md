@@ -21,7 +21,15 @@
 | **OPA** | *Open Policy Agent* : moteur évaluant des politiques d’autorisation. Dans le POC, il décide si une régularisation SAV est permise. |
 | **JWT** | Jeton signé transportant des informations d’identité et de périmètre. Le serveur doit vérifier sa signature et sa validité. Signé ne signifie pas chiffré : un JWT n’est pas un coffre à secrets. |
 | **Workflow durable** | Processus dont la progression et les attentes sont conservées pour permettre une reprise après interruption. Temporal fournit cette capacité. |
-| **Worker / activité** | Le worker est le processus qui exécute les tâches. Une activité Temporal effectue notamment un appel externe ; elle peut être réessayée. |
+| **Temporal** | Moteur d’orchestration durable : coordonne les étapes et conserve un historique permettant de reprendre un processus interrompu. Voir [le chapitre dédié](temporal.md). |
+| **Workflow / exécution** | Le workflow définit le déroulement d’un processus ; une exécution est un cas concret, par exemple l’achat d’une commande identifiée. |
+| **Worker** | Processus applicatif qui récupère des tâches Temporal et exécute le code des workflows et des activités. |
+| **Activité** | Tâche effectuant une opération, notamment un appel API ou une écriture externe. Elle peut être réessayée ; son effet métier doit être protégé contre les doublons. |
+| **File de tâches** | Point de distribution des tâches aux workers. Dans ce POC : `maas-ticketing`. Ce n’est pas un bus d’événements métier. |
+| **Signal / query** | Un signal transmet une information au workflow, par exemple « paiement confirmé ». Une query interroge son état sans le modifier ; elle ne constitue pas un événement de l’historique. |
+| **Minuterie durable** | Attente gérée par Temporal, conservée malgré l’arrêt du worker. Exemple : espacer les contrôles de statut bancaire. |
+| **Historique / replay** | Temporal conserve les événements d’exécution. Le worker peut rejouer le code avec cet historique pour reconstruire l’état ; les résultats d’activités déjà enregistrés sont réutilisés. |
+| **Retry / timeout** | Retry : nouvelle tentative selon une politique ; timeout : délai maximal applicable à une tentative ou une attente. Ils ne remplacent pas le rapprochement d’une opération incertaine. |
 | **Idempotence** | Propriété permettant de répéter une demande identifiée sans répéter son effet métier. Exemple : retrouver le même chargement après une réponse perdue. |
 | **CloudEvents** | Format commun pour l’enveloppe d’un événement : identité, source, type, date et données. Il ne définit pas le sens d’une validation ni une infrastructure de transport des messages. |
 | **Sandbox** | Environnement d’essai d’un prestataire. Bridge Demo Bank reproduit un parcours bancaire sans argent réel. |
@@ -31,7 +39,9 @@
 | **Prépayé / postpayé** | Paiement avant utilisation / facturation après utilisation. Ici, le vélo produit une créance simulée après usage, sans encaissement postpayé connecté. |
 | **ACSC** | Statut de règlement attendu dans l’intégration Bridge. Le service vérifie aussi montant, devise et référence ; la lecture de ce seul mot dans une page ne suffit pas. |
 | **Keyple / Calypso / SAM** | Keyple est un SDK d’accès aux cartes et lecteurs ; Calypso est une technologie de billettique. Un SAM est un module de sécurité pour les opérations cryptographiques. Le POC utilise une carte stub sans SAM réel. |
-| **Blockchain / Anvil** | Une blockchain enregistre des transactions dans des blocs. Anvil fournit ici un réseau Ethereum local de développement, pas un registre indépendant partagé entre opérateurs. |
+| **Blockchain** | Registre de transactions organisées en blocs reliés cryptographiquement. Un réseau et sa gouvernance peuvent permettre à plusieurs acteurs de vérifier des enregistrements communs. Cela ne garantit pas la vérité des données déposées. |
+| **Anvil** | Logiciel qui fait fonctionner notre blockchain Ethereum locale de développement. Il démontre les transactions et l’ancrage, pas une gouvernance entre opérateurs indépendants. |
+| **Ancrage** | Inscription d’une empreinte sur la blockchain pour disposer d’une référence de comparaison ; le document original reste ici hors chaîne. |
 | **Smart contract** | Programme exécuté sur la blockchain. ProofRegistry conserve des empreintes ; le mot « contrat » ne désigne pas ici une signature d’abonnement par un étudiant. |
 | **SHA-256 / empreinte** | Fonction produisant une empreinte à partir d’un contenu. Elle permet de comparer des versions ; elle ne chiffre pas le contenu et ne garantit pas sa véracité. |
 | **Ed25519 / signature** | Algorithme de signature à clé privée, vérifiable avec la clé publique. Ici, il signe les manifestes du POC ; ce n’est pas un parcours de signature électronique qualifiée. |

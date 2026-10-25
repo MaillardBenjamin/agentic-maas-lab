@@ -49,7 +49,7 @@ Le tarif est calculé à partir du [catalogue structuré](../../fixtures/catalog
 
 ## Orchestration, banque et carte
 
-**Temporal** (`temporal`, `temporal-ui`) mémorise l’historique des workflows. Le **worker** (`worker`) exécute les activités : appels à l’API ou à un adaptateur. Les workflows de cette version sont :
+**Temporal** est le moteur d’orchestration durable : il coordonne les étapes d’un processus et conserve leur progression pour permettre une reprise après interruption. Le service `temporal` conserve l’historique et distribue les tâches ; `temporal-ui` permet de consulter leur exécution. Le **worker** (`worker`) exécute le code des workflows et les activités, notamment les appels à l’API ou à un adaptateur. Voir [l’explication des concepts et de la reprise](temporal.md). Les workflows de cette version sont :
 
 | Workflow | Fonction |
 |---|---|
@@ -68,7 +68,7 @@ Sources : [workflows](../../services/worker/main.py), [connecteur Bridge](../../
 
 **CloudEvents** est un format d’enveloppe, pas un serveur de messages déployé dans cette pile. Les événements passent par les API et les transactions métier. Leur source, leur type et leur identité sont contrôlés ; une répétition ne doit pas produire un nouvel effet. Les sources X/Y de validation sont des fabricants fictifs.
 
-**Anvil** (`anvil`, profil `proofs`) est un nœud Ethereum de développement local. Le contrat Solidity **ProofRegistry** conserve l’empreinte SHA-256 d’un manifeste de lot. Le manifeste est conservé hors chaîne et signé en **Ed25519** par une clé du POC. Cette signature est distincte de la transaction Ethereum et ne signe pas un contrat d’abonnement pour un voyageur. Une date de bloc est un horodatage de la chaîne locale, pas un horodatage qualifié indépendant.
+**Anvil** (`anvil`, profil `proofs`) fait fonctionner la **blockchain Ethereum locale de développement** du POC. Une blockchain est un registre de transactions regroupées en blocs reliés cryptographiquement. Voir [le mécanisme, les bénéfices et les limites](blockchain-et-anvil.md). Le contrat Solidity **ProofRegistry** conserve l’empreinte SHA-256 d’un manifeste de lot. Le manifeste est conservé hors chaîne et signé en **Ed25519** par une clé du POC. Cette signature est distincte de la transaction Ethereum et ne signe pas un contrat d’abonnement pour un voyageur. Une date de bloc est un horodatage de la chaîne locale, pas un horodatage qualifié indépendant.
 
 **OpenTelemetry** instrumente l’API et les workflows/activités Temporal. Le collecteur `otel` transmet les traces à **Jaeger** (`jaeger`) pour les consulter. La propagation complète à travers les agents reste à compléter ; la console ne constitue pas une preuve de traçage exhaustif de tous les appels. Les corps des demandes et secrets n’ont pas vocation à être exportés.
 

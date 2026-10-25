@@ -10,7 +10,7 @@ La coopération avec les partenaires vélo et parking est implémentée : **agen
 
 ## Comprendre l’architecture
 
-Le [dossier d’architecture de haut niveau](docs/architecture/README.md) présente les principes, les composants et leurs responsabilités, les bénéfices attendus et les compromis. Il contient des diagrammes Mermaid et un glossaire accessible aux lecteurs qui découvrent A2A, MCP, GraphRAG, Temporal ou Anvil. Il distingue le POC actuel des simulations et des extensions futures.
+Le [dossier d’architecture de haut niveau](docs/architecture/README.md) présente les principes, les composants et leurs responsabilités, les bénéfices attendus et les compromis. Il explique notamment [Temporal et ses mécanismes de reprise](docs/architecture/temporal.md), ainsi que [la blockchain, Anvil et les bénéfices de l’ancrage](docs/architecture/blockchain-et-anvil.md). Il contient des diagrammes Mermaid et un glossaire accessible aux lecteurs qui découvrent A2A, MCP, GraphRAG, Temporal ou Anvil. Il distingue le POC actuel des simulations et des extensions futures.
 
 ## Démarrer
 
@@ -99,7 +99,7 @@ flowchart TB
     WORKER --> SIM["Simulateur carte avec état SQLite"]
     SIM --> KEY["SDK Keyple réel · carte Calypso stub"]
     API -->|"Pay by Link · relecture ACSC"| BANK["Bridge Demo Bank · sandbox testée"]
-    WORKER -->|"ancrage via API interne"| CHAIN["Anvil · contrat ProofRegistry"]
+    WORKER -->|"ancrage via API interne"| CHAIN["Blockchain Ethereum locale · Anvil / ProofRegistry"]
     API --> OTEL["OpenTelemetry → Jaeger · HTTP API"]
     LAB["Harness² Google · conteneur isolé"] -. "rapports hors production" .-> ART["artifacts/harness2"]
 ```
