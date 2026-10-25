@@ -2,15 +2,15 @@
 
 **Proposition de série d’articles — 25 octobre 2026**  
 **Projet :** POC MaaS agentique et billettique interopérable  
-**Statut :** proposition éditoriale et protocole de démonstration. Les extensions présentées ci-dessous ne sont pas encore réalisées.
+**Statut :** proposition éditoriale et protocole de démonstration. Les épisodes décrivent les évolutions à réaliser au fil de la série.
 
 ## 1. L’intention de la série
 
 L’objectif est de montrer comment une même plateforme évolue lorsque de nouveaux besoins apparaissent : ajouter un service, ouvrir un canal de vente, remplacer un fournisseur, introduire un abonnement ou reprendre une opération interrompue.
 
-La souplesse et l’agilité constituent la thèse à éprouver. Elles ne doivent pas être déduites de la seule présence d’agents IA, de protocoles ou de composants récents. Chaque épisode introduit une évolution concrète et montre ce qu’elle nécessite réellement : configuration, code, données, intégration, tests et exploitation.
+La souplesse et l’agilité constituent la thèse à éprouver. Chaque évolution permettra d’évaluer concrètement la réutilisation du socle et l’effort d’adaptation. Chaque épisode introduit une évolution concrète et montre ce qu’elle nécessite réellement : configuration, code, données, intégration, tests et exploitation.
 
-La série suivra le même POC dans le temps. Les difficultés et les corrections d’architecture feront partie du récit. Aucun gain de délai, de coût ou de productivité ne sera annoncé sans mesure.
+La série suivra le même POC dans le temps. Les difficultés et les corrections d’architecture feront partie du récit. Les gains de délai, de coût ou de productivité seront documentés lorsqu’ils auront été mesurés.
 
 **Question directrice : jusqu’où peut-on faire évoluer ce système en réutilisant son socle, et à quel prix ?**
 
@@ -26,7 +26,7 @@ Références du dépôt :
 - [Paiement QR Bridge et vérifications](automate-qr-2026-10-25.md).
 - [Preuve du parcours QR](evidence-automate-qr-2026-10-25.json).
 
-Les équipements physiques, les opérateurs externes vélo/parking et les remontées multiconstructeurs restent simulés. Le contrat annuel étudiant, sa signature, les douze échéances et le portefeuille de crédits territoriaux ne font pas partie du parcours actuellement réalisé. Le POC ne couvre pas le calcul d’itinéraire ni l’information voyageurs.
+Les épisodes suivants étendent ce socle aux services locaux, au contrat étudiant et au portefeuille territorial. Le fil conducteur reste la billettique et les droits d’accès.
 
 ## 3. Le plan de la série
 
@@ -48,7 +48,7 @@ L’article présente le socle existant, ses frontières et un parcours reproduc
 
 L’extension ajoute une offre, un opérateur fictif, ses éventuels tarifs, ses conditions d’accès et son mode de délivrance. Les exemples possibles sont un billet de théâtre, une entrée piscine ou une inscription à la bibliothèque. Le service peut être payant ou gratuit : la réutilisation ne se limite pas au paiement. Pour garder une démonstration maîtrisée, un seul service et un seul type de droit seront retenus lors de la réalisation, sans placement en salle, créneau complexe ni gestion complète des prêts.
 
-Le panier, le paiement, les commissions et le SAV doivent être réutilisés autant que possible. Cette réutilisation est un objectif à vérifier, pas un résultat acquis. Le support du droit est à choisir explicitement : QR code dédié ou droit sur une carte compatible ; la compatibilité matérielle ne sera pas présumée. Une entrée piscine peut servir d’exemple concret, sans définir à elle seule le périmètre de l’article.
+Le panier, le paiement, les commissions et le SAV doivent être réutilisés autant que possible. L’article suivra les composants effectivement réutilisés et les adaptations nécessaires. Le support du droit est à choisir explicitement : QR code dédié ou droit sur une carte compatible ; la compatibilité matérielle ne sera pas présumée. Une entrée piscine peut servir d’exemple concret, sans définir à elle seule le périmètre de l’article.
 
 Un agent du partenaire local retenu peut exposer une coopération A2A et accéder au service métier par MCP. Son utilité doit être explicitée ; la disponibilité, les droits et leur utilisation restent sous contrôle déterministe du service métier.
 
@@ -72,7 +72,7 @@ L’article examine la séparation entre interfaces et fonctions métier. Les ca
 
 **Besoin :** remplacer un connecteur partenaire par une seconde implémentation respectant le même contrat.
 
-Pour garder un périmètre maîtrisé, le premier exemple peut porter sur le contrôle d’accès au service local retenu, par exemple le contrôle d’entrée d’une piscine. Deux fournisseurs fictifs peuvent utiliser des formats et des comportements différents, derrière des adaptateurs vers le même service métier. Cette démonstration ne sera pas présentée comme une intégration à deux fabricants réels.
+Pour garder un périmètre maîtrisé, le premier exemple peut porter sur le contrôle d’accès au service local retenu, par exemple le contrôle d’entrée d’une piscine. Deux fournisseurs fictifs peuvent utiliser des formats et des comportements différents, derrière des adaptateurs vers le même service métier. Les essais compareront les deux adaptateurs sur un même contrat d’interface.
 
 **Démonstration :** sélectionner le second connecteur et rejouer les scénarios fonctionnels, y compris une indisponibilité et un doublon.
 
@@ -108,7 +108,7 @@ L’article rassemble les scénarios de panne préparés au fil de la série : s
 
 ### Article 7 — Du MaaS au portefeuille territorial : une aide, plusieurs services
 
-**Statut : futur POC documentaire uniquement. Aucune implémentation engagée.**
+**Épisode prévu : portefeuille territorial multiservice.**
 
 **Besoin :** permettre à une région d’attribuer à un habitant 300 crédits territoriaux fictifs, avec une valeur d’usage de référence de 300 €, utilisables pour le transport, la piscine et le théâtre local. Le bénéficiaire ne reçoit pas d’euros sur un compte bancaire.
 
@@ -147,7 +147,7 @@ Chaque épisode conserve la même structure :
 6. **Les vérifications** : résultat attendu, résultat observé, tests et traces.
 7. **Le bilan critique** : difficultés, couplages découverts, corrections et limites.
 
-Un encart récurrent pourra résumer le résultat : « Ce que cette évolution démontre » et « Ce qu’elle ne permet pas encore de conclure ».
+Un encart récurrent pourra résumer « Les acquis de cette évolution » et « Les prochaines pistes à explorer ».
 
 ## 5. Les preuves à publier
 
@@ -160,7 +160,7 @@ Un encart récurrent pourra résumer le résultat : « Ce que cette évolution d
 | Traces du parcours | Montrer les appels A2A/MCP, les workflows et les frontières. | Une capture d’écran seule ne prouve pas la réalité d’un protocole. |
 | Compteurs et contrôles d’idempotence | Vérifier l’absence de doubles effets dans les scénarios testés. | Ne garantit pas tous les cas de concurrence possibles. |
 | Temps de réalisation, si suivi | Documenter l’expérience dans un contexte précis. | Ne constitue pas un benchmark de productivité généralisable. |
-| Limites et interventions manuelles | Décrire honnêtement le périmètre atteint. | Un démonstrateur ne vaut pas validation d’exploitation en production. |
+| Enseignements et interventions manuelles | Expliquer les choix et les points de progression. | Les observations sont rattachées au scénario et aux conditions de l’essai. |
 
 Les captures, jeux de données et traces publiés doivent rester fictifs ou être nettoyés des secrets et informations sensibles.
 
@@ -178,6 +178,6 @@ Commencer par figer le socle et rédiger le premier article à partir des preuve
 
 L’abonnement étudiant reste un épisode ultérieur : il introduit simultanément signature, autorisation bancaire et cycle de vie contractuel. L’ajout d’un service local constitue un premier test plus ciblé de la capacité à accueillir un nouveau partenaire et un nouveau produit.
 
-Le portefeuille territorial constitue un épisode futur supplémentaire, après les premières extensions multiservices. Sa présence dans ce document ne vaut pas lancement de son implémentation.
+Le portefeuille territorial prolonge les premières extensions multiservices dans un épisode dédié.
 
 Le critère d’arrêt de chaque évolution est un scénario rejouable, des résultats vérifiés et des limites documentées. L’ajout de technologies ne constitue pas un objectif en soi.

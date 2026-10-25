@@ -37,7 +37,7 @@ sequenceDiagram
     UI-->>V: Affichage de l’explication
 ```
 
-Ce parcours ne crée pas un achat. Le devis et la commande sont obtenus séparément par les contrôles métier de l’interface. Dans le catalogue fictif, le moteur choisit la meilleure réduction admissible sans cumuler les remises.
+Le dialogue explique l’offre ; les contrôles métier de l’interface permettent ensuite d’obtenir le devis et de confirmer la commande. Dans le catalogue fictif, le moteur choisit la meilleure réduction admissible sans cumuler les remises.
 
 **À retenir :** A2A sert à déléguer ; MCP sert à consulter ; le moteur métier reste responsable du montant.
 
@@ -85,7 +85,7 @@ La borne peut fermer son écran sans effacer la commande ni arrêter le workflow
 
 **À retenir :** ouvrir un QR ou revenir sur une page de succès ne suffit pas ; seule la vérification bancaire déclenche la délivrance. Voir [le test complet du parcours](../automate-qr-2026-10-25.md).
 
-## 3. Réserver un vélo : coopération réelle, partenaire fictif
+## 3. Réserver un vélo : coopérer avec un partenaire
 
 Après délivrance de la commande, le voyageur confirme une opération dans l’interface. Le service crée une opération durable. Pendant son traitement, il fournit une autorisation temporaire limitée à cette action.
 
@@ -120,9 +120,9 @@ sequenceDiagram
     API-->>V: Réservation confirmée ou refusée
 ```
 
-Le runtime impose une consultation de disponibilité avant l’écriture, même si le modèle omet cet appel. Les paramètres d’action sont fixés par le service, pas par le texte du modèle. L’absence de stock produit un refus ; une phrase de l’agent affirmant un succès ne remplace pas le reçu enregistré.
+Le runtime impose une consultation de disponibilité avant l’écriture, même si le modèle omet cet appel. Les paramètres d’action sont fixés par le service, pas par le texte du modèle. Le stock détermine l’acceptation de la réservation ; le reçu enregistré constitue la confirmation affichée.
 
-Lors d’une fin d’usage, le service produit aussi un événement CloudEvents dans la transaction métier. Ce flux n’implique pas que les valideurs physiques parlent A2A : dans le POC, leurs remontées sont des événements simulés.
+Lors d’une fin d’usage, le service produit aussi un événement CloudEvents dans la transaction métier. Les agents coopèrent en A2A ; les remontées de validation utilisent le flux d’événements.
 
 Voir [les cycles partenaires, la concurrence et les reprises](../partenaires-a2a-2026-10-24.md).
 
@@ -130,6 +130,6 @@ Voir [les cycles partenaires, la concurrence et les reprises](../partenaires-a2a
 
 Les événements acceptés sont conservés dans PostgreSQL. Une demande d’ancrage constitue un manifeste de lot contenant types, dates et empreintes métier. Le POC signe ce manifeste en Ed25519. Temporal fait ensuite inscrire son empreinte SHA-256 dans le contrat local ProofRegistry sur Anvil.
 
-Le manifeste reste hors chaîne. La console montre l’empreinte, le bloc, le réseau local et l’instance de déploiement ; la date du bloc est affichée en heure de Paris lorsqu’elle est disponible. Une comparaison ultérieure permet de détecter un manifeste modifié. Ce mécanisme ne remplace pas le contrôle d’accès et ne certifie pas qu’un voyageur est réellement passé.
+Le manifeste reste hors chaîne. La console montre l’empreinte, le bloc, le réseau local et l’instance de déploiement ; la date du bloc est affichée en heure de Paris lorsqu’elle est disponible. Une comparaison ultérieure permet de détecter un manifeste modifié. Les contrôles métier vérifient les conditions d’acceptation ; l’ancrage permet de vérifier l’intégrité du lot conservé.
 
 Une panne d’Anvil ne doit pas empêcher le traitement des validations : le workflow d’ancrage peut être repris séparément.

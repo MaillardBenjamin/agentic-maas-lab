@@ -57,17 +57,17 @@ Exemple du POC : le simulateur a chargé la carte mais perd volontairement sa r�
 4. L’API vérifie le règlement, le montant, la devise et la référence, puis persiste le paiement et envoie le signal au workflow d’achat.
 5. Le workflow exécute les activités de délivrance et de mise à jour du dossier. La borne lit ensuite le résultat métier.
 
-Un redémarrage du worker laisse l’historique et les signaux reçus côté Temporal. En revanche, si Temporal lui-même est indisponible, l’application doit gérer cette indisponibilité et reprendre lorsque son service revient. La configuration locale n’est pas un déploiement à haute disponibilité.
+Un redémarrage du worker laisse l’historique et les signaux reçus côté Temporal. En revanche, si Temporal lui-même est indisponible, l’application doit gérer cette indisponibilité et reprendre lorsque son service revient.
 
-La surveillance bancaire de la borne est bornée à 15 minutes ; le lien expire après 10 minutes. Une situation incertaine ou un règlement tardif peut demander un contrôle manuel. Temporal ne prouve pas qu’une banque a réglé : cette preuve vient de la relecture du prestataire. Voir [les essais du paiement QR](../automate-qr-2026-10-25.md).
+La surveillance bancaire de la borne est bornée à 15 minutes ; le lien expire après 10 minutes. Une situation incertaine ou un règlement tardif peut demander un contrôle manuel. La confirmation du règlement vient de la relecture du prestataire par l’API. Voir [les essais du paiement QR](../automate-qr-2026-10-25.md).
 
-## Les bénéfices et leurs limites
+## Les bénéfices dans les parcours
 
 - **Continuité :** les opérations engagées ne dépendent plus de la durée d’un écran ou d’une requête HTTP.
 - **Reprise contrôlée :** attentes, nouvelles tentatives et échecs sont explicites et consultables.
 - **Compréhension :** l’historique permet de distinguer « paiement attendu », « paiement confirmé » et « délivrance en cours ».
-- **Évolution :** de nouvelles étapes pourraient être ajoutées, comme un cycle d’abonnement, à condition de gérer la compatibilité des workflows déjà engagés. L’abonnement annuel reste futur.
+- **Évolution :** de nouvelles étapes pourraient être ajoutées, comme un cycle d’abonnement, à condition de gérer la compatibilité des workflows déjà engagés. Ce cycle est décrit dans la feuille de route des articles.
 
-Ces bénéfices ont un coût : service et base supplémentaires, code de workflow soumis à des contraintes, délais à configurer et effets externes à rendre idempotents. Temporal ne remplace ni les agents IA, ni les règles métier, ni les habilitations OPA. Il ne calcule pas un tarif et ne décide pas seul d’un remboursement.
+Ces bénéfices ont un coût : service et base supplémentaires, code de workflow soumis à des contraintes, délais à configurer et effets externes à rendre idempotents. La répartition des responsabilités reste claire : les agents accompagnent, les services calculent et exécutent, OPA contrôle les habilitations et Temporal coordonne les étapes.
 
 Les quatre workflows actuels et leur rôle sont recensés dans [les composants](composants.md). Le code de référence est [le worker du POC](../../services/worker/main.py).
