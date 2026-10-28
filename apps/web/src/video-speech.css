@@ -1,0 +1,22 @@
+.video-speech { margin-top: 20px; border-top: 1px solid #e1e8da; padding-top: 14px; }
+.video-speech-toggle { display: inline-flex; align-items: center; gap: 9px; background: transparent; border: 0; padding: 10px 0; font-size: 12px; color: #3b6848; text-align: left; }
+.video-speech-body { border: 1px solid #dce6d3; border-radius: 10px; background: #f9fbf6; padding: 20px; margin-top: 12px; }
+.video-speech-body h3 { font-size: 15px; margin: 0 0 12px; }
+.video-speech-body > p { font-size: 12px; line-height: 1.7; color: #62765c; }
+.video-speech-ready { display: flex; align-items: center; gap: 7px; }
+.video-speech-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+.video-speech-options select { width: 100%; }
+.video-speech-preview { margin: 16px 0; }
+.video-speech-preview video { display: block; width: 100%; max-width: 520px; max-height: 320px; background: #15372c; border-radius: 8px; }
+.video-speech-preview span { display: block; margin-top: 7px; font-size: 12px; }
+.video-speech-analyze, .video-speech-clear, .video-speech-stop { display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 12px 15px; border: 1px solid #b7c9a8; border-radius: 7px; background: #e7f0dd; color: #2d5134; font-size: 12px; margin: 10px 10px 10px 0; }
+.video-speech-clear { background: transparent; }
+.video-speech-live { border: 1px solid #d9e5cf; padding: 14px; border-radius: 8px; background: #eef5e7; margin: 15px 0; }
+.video-speech-live > p:first-child { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.video-speech-caption { white-space: pre-wrap; font-size: 12px; line-height: 1.7; }
+.video-speech-result { padding-top: 18px; }
+.video-speech-result textarea { font: inherit; width: 100%; padding: 12px; color: #254b37; background: #fff; border: 1px solid #cddcc1; border-radius: 7px; resize: vertical; }
+@keyframes video-speech-spin { to { transform: rotate(360deg); } }
+.video-speech-spin { animation: video-speech-spin 1.5s linear infinite; }
+@media (max-width: 650px) { .video-speech-options { grid-template-columns: 1fr; } .video-speech-body { padding: 15px; } .video-speech-analyze { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .video-speech-spin { animation: none; } }

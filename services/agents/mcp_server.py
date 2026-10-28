@@ -8,10 +8,10 @@ mcp = FastMCP("maas-ticketing-tools", instructions="Données fictives, lecture s
 
 
 async def api(path, body=None):
-    headers = get_http_headers(include={"authorization"})
+    headers = get_http_headers(include={"authorization", "x-maas-coordination"})
     auth = headers.get("authorization", "")
     async with httpx.AsyncClient(timeout=10) as client:
-        result = await client.request("POST" if body else "GET", os.environ.get("API_URL", "http://api:8000") + "/api" + path, json=body, headers={"Authorization": auth})
+        result = await client.request("POST" if body else "GET", os.environ.get("API_URL", "http://api:8000") + "/api" + path, json=body, headers={"Authorization": auth, "X-MaaS-Coordination": headers.get("x-maas-coordination", "")})
         result.raise_for_status()
         return result.json()
 
@@ -38,6 +38,12 @@ async def read_order(order_id: str) -> dict:
 async def read_statement(order_id: str) -> dict:
     """Read exact prepaid, postpaid and distribution amounts for an accessible order."""
     return await api("/orders/" + order_id + "/statement")
+
+
+@mcp.tool
+async def prepare_quote(products: list[str], travel_date: str) -> dict:
+    """Prepare a reviewable deterministic quote for the selected traveler, without purchasing."""
+    return await api("/assistant/quotes", {"products": products, "travel_date": travel_date})
 
 if __name__ == "__main__":
     mcp.run(transport="http", host="0.0.0.0", port=8003, path="/mcp")

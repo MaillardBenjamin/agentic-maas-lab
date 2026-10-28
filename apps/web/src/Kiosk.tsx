@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AgentActivity } from "./AgentActivity";
 import { ArrowLeft, ArrowRight, Bike, CarFront, Check, CheckCircle2, CreditCard, Headphones, LoaderCircle, LogOut, Nfc, ShieldCheck, Ticket, Wind } from "lucide-react";
 import { Assistant } from "./Assistant";
 import { DemoScope, type AIProvider } from "./DemoScope";
@@ -74,11 +75,11 @@ export function Kiosk({ provider, bridgeEnabled }: { provider: AIProvider; bridg
     return () => clearInterval(timer);
   }, [!!profile, bankExpiry]);
 
-  async function api(path: string, method = "GET", body?: Data, bearer = auth) {
+  async function api(path: string, method = "GET", body?: Data | Blob, bearer = auth) {
     const version = epoch.current;
     let response: Response;
     try {
-      response = await fetch("/api" + path, { method, headers: { "Content-Type": "application/json", ...(bearer ? { Authorization: "Bearer " + bearer } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(path === "/chat" ? 310000 : 20000) });
+      response = await fetch("/api" + path, { method, headers: { "Content-Type": body instanceof Blob ? (body.type || "application/octet-stream") : "application/json", ...(body instanceof Blob ? { "X-Capture-Consent": "true" } : {}), ...(bearer ? { Authorization: "Bearer " + bearer } : {}) }, body: body instanceof Blob ? body : body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(path === "/chat" ? 610000 : 20000) });
     } catch (e) {
       if (epoch.current !== version) throw new OldSession();
       throw new RequestError("Le service n’a pas répondu. Réessayez ou consultez l’agence de démonstration.");
@@ -204,6 +205,7 @@ export function Kiosk({ provider, bridgeEnabled }: { provider: AIProvider; bridg
             {step === "loading" && order && <div className="kiosk-loading" role="status"><LoaderCircle className="kiosk-spin" size={48} /><h1>Le chargement est en cours.</h1><p>Gardez votre carte sur le lecteur simulé. Cet écran attend la confirmation du service de délivrance.</p><p className="kiosk-load-status">{order.state === "reconciliation_required" ? "Rapprochement nécessaire : consultez l’agence de démonstration." : order.state === "fulfilled" ? "La relecture de carte doit encore être vérifiée." : order.state === "awaiting_resume" ? "Le workflow attend un signal de reprise." : "Paiement enregistré · confirmation du chargement attendue"}</p><button className="kiosk-secondary" disabled={busy} onClick={() => perform(resume)}>Reprendre le suivi</button></div>}
             {step === "done" && order && <div className="kiosk-done"><CheckCircle2 size={56} /><p className="kiosk-eyebrow">CHARGEMENT CONFIRMÉ</p><h1>Votre carte est prête, {name}.</h1><p>Le SDK Keyple a écrit et relu votre carte simulée.</p><div className="kiosk-receipt"><span>Commande <b>{order.id.slice(-12)}</b></span><span>{bankMode ? "Virement Bridge sandbox" : order.quote.total_cents === 0 ? "Sans prépaiement" : "CB simulée"} <b>{money(order.quote.total_cents)}</b></span><span>Chargement de carte <b>{order.card.load_count} · relecture vérifiée</b></span></div><button className="kiosk-primary" onClick={() => reset("Merci. La session est terminée et la borne est prête pour le prochain voyageur.")}>Retirer ma carte et terminer <ArrowRight size={20} /></button><p className="kiosk-next">Pour réserver un vélo ou utiliser le parking, retrouvez cette commande dans l’espace Voyageur avec la même identité de démo.</p></div>}
           </div>
+          {profile && <AgentActivity key={profile.id} api={api} />}
           <div className="kiosk-screen-footer"><span><ShieldCheck size={15} /> Carte, lecteur et terminal simulés</span>{profile && <><span>{bankExpiry ? "Session maintenue pendant la validité du QR code" : "Session d’écran · retour après 2 min d’inactivité"}</span><button disabled={busy} onClick={() => reset("Session terminée. Les commandes déjà engagées restent conservées dans le POC.")}><LogOut size={15} /> Terminer la session</button></>}</div>
         </div>
         <div className="kiosk-hardware">

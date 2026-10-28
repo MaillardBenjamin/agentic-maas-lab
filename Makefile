@@ -1,4 +1,30 @@
 .NOTPARALLEL:
+.PHONY: test-live-audio
+test-live-audio:
+	docker compose run --rm --no-deps api python -m pytest -q tests/test_live_audio.py
+	docker compose run --rm --no-deps web npm test
+.PHONY: test-agency
+test-agency:
+	docker compose run --rm --no-deps api python -m pytest -q tests/test_agency.py
+	docker compose run --rm --no-deps web npm test
+	docker compose run --rm --no-deps -v "$(CURDIR)/data/agency-evidence:/evidence" api python scripts/agency_smoke.py
+.PHONY: test-agent-activity test-agent-activity-local
+test-agent-activity:
+	docker compose run --rm --no-deps api python -m pytest -q tests/test_agent_activity.py
+	docker compose run --rm --no-deps web npm test
+test-agent-activity-local:
+	docker compose run --rm --no-deps -v "$(CURDIR)/data/activity-evidence:/evidence" api python scripts/agent_activity_smoke.py
+.PHONY: perception-assets perception perception-stop test-perception
+perception-assets:
+	python3 scripts/perception_assets.py
+perception: perception-assets
+	docker compose --profile perception build perception api web
+	docker compose --profile perception up -d --no-deps --wait --wait-timeout 120 perception api web
+perception-stop:
+	docker compose --profile perception stop perception
+test-perception:
+	docker compose run --rm --no-deps api python -m pytest -q tests/test_perception.py
+	docker compose --profile perception run --rm --no-deps perception python -m pytest -q -p no:cacheprovider /app/test_service.py
 .PHONY: bootstrap up seed test demo protocols proofs lab resilience chain-restart security evidence verify stop ai-local ai-openai test-live-local test-live-openai test-access test-bridge-prepare test-bridge-status test-bridge-verify test-partners test-partners-local test-partners-openai test-partners-concurrency test-partners-resilience
 bootstrap:
 	python3 -c 'from pathlib import Path; p=Path(".env"); p.exists() or (p.write_text(Path(".env.example").read_text()), p.chmod(0o600))'
@@ -38,7 +64,7 @@ security:
 	@trap 'docker compose start opa' EXIT; \
 	docker compose stop opa && \
 	docker compose exec -T api python scripts/security_smoke.py opa-down
-verify: test demo protocols test-partners test-partners-concurrency test-partners-resilience proofs resilience security lab chain-restart
+verify: test demo protocols test-cooperation test-partners test-partners-concurrency test-partners-resilience proofs resilience security lab chain-restart
 	docker compose exec -T api python scripts/telemetry_smoke.py
 chain-restart:
 	docker compose exec -T api python scripts/chain_resilience.py prepare
@@ -86,3 +112,11 @@ test-partners-resilience:
 	docker compose exec -T api python scripts/partner_resilience.py queue-stopped && \
 	docker compose start worker && \
 	docker compose exec -T api python scripts/partner_resilience.py check
+
+.PHONY: test-cooperation test-cooperation-local
+test-cooperation:
+	docker compose --profile tests up -d agent-fixture partners-fixture
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts/runtime_guard_test.py:/app/runtime_guard_test.py:ro" agents python runtime_guard_test.py
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/data/cooperation-evidence:/evidence" api python scripts/cooperation_smoke.py fixture
+test-cooperation-local:
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/data/cooperation-evidence:/evidence" api python scripts/cooperation_smoke.py ollama

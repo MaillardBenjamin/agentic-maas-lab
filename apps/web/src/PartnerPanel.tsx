@@ -9,7 +9,7 @@ const actions: Record<string, Record<string, string>> = {
   parking: { reserve: "Réserver une place via A2A", start: "Entrer au parking via A2A", finish: "Sortir du parking via A2A", cancel: "Annuler la réservation via A2A" },
 };
 
-export function PartnerPanel({ api, order, aiEnabled }: { api: API; order: Data; aiEnabled: boolean }) {
+export function PartnerPanel({ api, order, aiEnabled, customer = false }: { api: API; order: Data; aiEnabled: boolean; customer?: boolean }) {
   const [data, setData] = useState<Data | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -32,6 +32,7 @@ export function PartnerPanel({ api, order, aiEnabled }: { api: API; order: Data;
   }, [order.id]);
   const pending = data?.operations.some((o: Data) => ["queued", "running", "executed"].includes(o.status));
   async function act(partner: string, action: string, booking: Data | undefined) {
+    window.dispatchEvent(new Event('maas-agent-activity-open'));
     setBusy(true); setError("");
     const signature = [partner, action, booking?.generation || 0, booking?.state || "available"].join(":");
     if (!keys.current.has(signature)) keys.current.set(signature, "partner-ui-" + crypto.randomUUID());
@@ -46,6 +47,7 @@ export function PartnerPanel({ api, order, aiEnabled }: { api: API; order: Data;
     finally { setBusy(false); }
   }
   async function resume(id: string) {
+    window.dispatchEvent(new Event('maas-agent-activity-open'));
     setBusy(true); setError("");
     try {
       await api("/partner-operations/" + id + "/resume", "POST", { confirmed: true });
@@ -56,10 +58,10 @@ export function PartnerPanel({ api, order, aiEnabled }: { api: API; order: Data;
   }
   const products = order.quote.lines.map((l: Data) => l.product);
   return (
-    <section className="partner-panel" aria-label="Coopération A2A avec les partenaires">
-      <h3>Utiliser vos services avec les agents partenaires</h3>
-      <p className="small muted">Agent MaaS → A2A → agent partenaire → MCP → service simulé. Les équipements restent fictifs ; chaque action est confirmée ci-dessous et suivie dans Temporal.</p>
-      {!aiEnabled && <p className="small">Activer un fournisseur IA pour lancer ces échanges A2A.</p>}
+    <section className="partner-panel" aria-label={customer ? "Utiliser mes services" : "Coopération A2A avec les partenaires"}>
+      <h3>{customer ? "Vos accès vélo et parking" : "Utiliser vos services avec les agents partenaires"}</h3>
+      <p className="small muted">{customer ? "Choisissez une action pour réserver ou utiliser votre service de démonstration." : "Agent MaaS → A2A → agent partenaire → MCP → service simulé. Les équipements restent fictifs ; chaque action est confirmée ci-dessous et suivie dans Temporal."}</p>
+      {!aiEnabled && <p className="small">{customer ? "La réservation est momentanément indisponible. Vos droits restent enregistrés." : "Activer un fournisseur IA pour lancer ces échanges A2A."}</p>}
       {data && <>
         <label className="check small">
           <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} disabled={busy} />
@@ -79,17 +81,17 @@ export function PartnerPanel({ api, order, aiEnabled }: { api: API; order: Data;
                 <p className="small"><strong>{states[state]}</strong> · {data.availability[partner]} ressource(s) disponible(s)</p>
                 {booking?.asset_id && <p className="small muted">Ressource : {booking.asset_id}</p>}
                 <div className="actions">
-                  {!failed && options.map(action => <button key={action} disabled={!confirmed || busy || pending || !aiEnabled || (action === "reserve" && data.availability[partner] === 0)} onClick={() => act(partner, action, booking)}>{actions[partner][action]}</button>)}
-                  {latest && latest.status !== "completed" && <button disabled={!confirmed || busy || !aiEnabled} onClick={() => resume(latest.id)}>{failed ? "Reprendre l’opération confirmée" : "Relancer le suivi Temporal"}</button>}
+                  {!failed && options.map(action => <button key={action} disabled={!confirmed || busy || pending || !aiEnabled || (action === "reserve" && data.availability[partner] === 0)} onClick={() => act(partner, action, booking)}>{customer ? actions[partner][action].replace(" via A2A", "") : actions[partner][action]}</button>)}
+                  {latest && latest.status !== "completed" && <button disabled={!confirmed || busy || !aiEnabled} onClick={() => resume(latest.id)}>{failed ? "Reprendre l’opération confirmée" : customer ? "Actualiser le suivi" : "Relancer le suivi Temporal"}</button>}
                 </div>
                 {latest && <div className="partner-receipt" aria-live="polite">
                   <span className={"badge " + (latest.status === "completed" ? "real" : "light")}>
-                    {latest.status === "completed" ? "Parcours A2A/MCP vérifié" : failed ? "Opération interrompue ou refusée" : "En cours via Temporal"}
+                    {latest.status === "completed" ? customer ? "Opération confirmée" : "Parcours A2A/MCP vérifié" : failed ? "Opération interrompue ou refusée" : customer ? "Demande en cours" : "En cours via Temporal"}
                   </span>
-                  <p className="small muted">{latest.test_only ? "Test de protocole avec modèle déterministe, sans LLM" : latest.mode === "ollama_local" ? "Inférence locale Ollama · " + latest.model : latest.mode === "openai_via_agno" ? "Inférence OpenAI · " + latest.model : "Attente du résultat des agents"}</p>
-                  {latest.evidence && <p className="small">Agents A2A : {latest.evidence.a2a_agents.join(" → ")}<br />Outils MCP exécutés : {latest.evidence.mcp_tools.join(", ")}</p>}
-                  {latest.result && <p className="small">Effet métier enregistré : {latest.result.effect_count} · {states[latest.result.booking.state]}</p>}
-                  {latest.result?.event_id && <p className="small muted">Événement CloudEvents enregistré ; relevé et commissions mis à jour.</p>}
+                  {!customer && <p className="small muted">{latest.test_only ? "Test de protocole avec modèle déterministe, sans LLM" : latest.mode === "ollama_local" ? "Inférence locale Ollama · " + latest.model : latest.mode === "openai_via_agno" ? "Inférence OpenAI · " + latest.model : "Attente du résultat des agents"}</p>}
+                  {!customer && latest.evidence && <p className="small">Agents A2A : {latest.evidence.a2a_agents.join(" → ")}<br />Outils MCP exécutés : {latest.evidence.mcp_tools.join(", ")}</p>}
+                  {latest.result && <p className="small">{customer ? "Votre service : " : "Effet métier enregistré : " + latest.result.effect_count + " · "}{states[latest.result.booking.state]}</p>}
+                  {!customer && latest.result?.event_id && <p className="small muted">Événement CloudEvents enregistré ; relevé et commissions mis à jour.</p>}
                   {latest.error && <p className="small error partner-error">{latest.error}</p>}
                   {latest.explanation && <details><summary className="small">Réponse de l’agent</summary><p className="small partner-explanation">{latest.explanation}</p></details>}
                 </div>}

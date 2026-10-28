@@ -1,0 +1,32 @@
+{
+  "assets": [
+    {
+      "name": "whisper-flamingo_multi-all_small.pt",
+      "url": "https://data.csail.mit.edu/public-release-sls/mwhisper-flamingo/models/whisper-flamingo_multi-all_small.pt",
+      "bytes": 2611373899,
+      "sha256": "cb11e6f24f71120c7ec29e2c68b66717940d7159092a264c32e6ca8f2dda74e8",
+      "compression": null
+    },
+    {
+      "name": "mavhubert_only_weights.pt",
+      "url": "https://data.csail.mit.edu/public-release-sls/mwhisper-flamingo/models/mavhubert_only_weights.pt",
+      "bytes": 1300838157,
+      "sha256": "7b959aa818558fd532634aae9dcb4b9f9ea7094b1d4d926d5d4eb260de247f3d",
+      "compression": null
+    },
+    {
+      "name": "shape_predictor_68_face_landmarks.dat",
+      "url": "https://raw.githubusercontent.com/davisking/dlib-models/master/shape_predictor_68_face_landmarks.dat.bz2",
+      "bytes": 99693937,
+      "sha256": "fbdc2cb80eb9aa7a758672cbfdda32ba6300efe9b6e6c7a299ff7e736b11b92f",
+      "compression": "bz2"
+    },
+    {
+      "name": "20words_mean_face.npy",
+      "url": "https://raw.githubusercontent.com/mpc001/Lipreading_using_Temporal_Convolutional_Networks/master/preprocessing/20words_mean_face.npy",
+      "bytes": 1168,
+      "sha256": "dbf68b2044171e1160716df7c53e8bbfaa0ee8c61fb41171d04cb6092bb81422",
+      "compression": null
+    }
+  ]
+}

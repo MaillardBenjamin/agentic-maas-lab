@@ -4,42 +4,33 @@
 
 Les diagrammes décrivent des parcours simplifiés du code actuel. Les variantes d’erreur et les détails HTTP sont expliqués dans les rapports d’essai liés à chaque section.
 
-## 1. Une question tarifaire : comprendre, déléguer, consulter
+## 1. Une question tarifaire : consulter l’organisation responsable
 
-Le voyageur demande pourquoi le transport étudiant coûte 7 €. L’accueil délègue à l’agent tarifaire par A2A. Celui-ci utilise MCP pour consulter le catalogue et rechercher les sources. Les outils reviennent aux API métier avec l’identité du demandeur.
+Le voyageur demande « Peux-tu me donner le tarif du parking ? ». L’accueil transmet sa question au coordinateur Tarifs, qui consulte l’agent de l’organisation Parking via A2A. Cette consultation ne nécessite ni achat ni confirmation d’une réservation.
 
 ```mermaid
 sequenceDiagram
     actor V as Voyageur
-    participant UI as Interface
-    participant API as API métier
-    participant A as Agent accueil
-    participant T as Agent tarifs
-    participant M as Serveur MCP
-    participant G as FalkorDB
-    V->>UI: Pourquoi le tarif étudiant est-il de 7 euros ?
-    UI->>API: Demande authentifiée
-    API->>A: A2A : message à l’accueil
-    A->>T: A2A : délégation tarifaire
-    T->>M: MCP : lire le catalogue
-    M->>API: API : catalogue structuré
-    API-->>M: Produits et règles versionnés
-    M-->>T: Résultat outil
-    T->>M: MCP : rechercher les sources
-    M->>API: API : recherche documentaire
-    API->>G: Recherche et liens du graphe
-    G-->>API: Passages et références
-    API-->>M: Sources retrouvées
-    M-->>T: Résultat outil
-    T-->>A: Explication et références
-    A-->>API: Réponse à la demande
-    API-->>UI: Texte et outils observés
-    UI-->>V: Affichage de l’explication
+    participant A as Accueil
+    participant T as Coordinateur Tarifs
+    participant P as Agent Parking
+    participant M as MCP fournisseur
+    participant S as Services métier Parking
+    V->>A: Quel est le tarif du parking ?
+    A->>T: A2A : question complète
+    T->>P: A2A : délégation de lecture limitée à Parking
+    P->>M: read_provider_context
+    M->>S: Identité + délégation signée
+    S->>S: Lire offres, règles et sources Parking
+    S-->>P: Tarif, conditions et références via MCP
+    P-->>T: Réponse de l’organisation Parking
+    T-->>A: Synthèse sourcée
+    A-->>V: Tarif et conditions
 ```
 
-Le dialogue explique l’offre ; les contrôles métier de l’interface permettent ensuite d’obtenir le devis et de confirmer la commande. Dans le catalogue fictif, le moteur choisit la meilleure réduction admissible sans cumuler les remises.
+Pour une offre combinée, le coordinateur consulte chaque organisation concernée. `prepare_offer` consulte les fournisseurs puis appelle le moteur déterministe pour préparer un devis à une date explicite. Le contexte signé fixe le voyageur et le vendeur ; les produits et la date restent examinables dans l’écran Voyageur ou Agence. Le bouton « Examiner la proposition » ouvre cet écran, où le consentement doit encore être donné. Aucun achat ni réservation n’est exécuté par cette préparation.
 
-**À retenir :** A2A sert à déléguer ; MCP sert à consulter ; le moteur métier reste responsable du montant.
+Le SAV utilise les mêmes délégations de lecture pour consulter uniquement les lignes, réservations et usages de chaque fournisseur dans la commande sélectionnée. Le coordinateur Commissions consulte les contrats et parts de chaque fournisseur ; le relevé global reste calculé par les services métier. Une indisponibilité fournisseur n’autorise pas à présenter une réponse inventée comme confirmée.
 
 ## 2. Un paiement QR sur la borne : attendre une preuve bancaire
 
@@ -94,8 +85,8 @@ sequenceDiagram
     actor V as Voyageur
     participant API as API métier
     participant T as Temporal et worker
-    participant M as Agent coordination MaaS
-    participant P as Agent partenaire vélo
+    participant M as Exécution MaaS confirmée
+    participant P as Opérations vélo confirmées
     participant MCP as MCP partenaire
     participant S as Service partenaire simulé
     V->>API: Confirmer la réservation

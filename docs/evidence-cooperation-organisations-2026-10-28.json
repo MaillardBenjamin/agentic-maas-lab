@@ -1,0 +1,185 @@
+{
+  "date": "2026-10-28",
+  "status": "passed",
+  "tests": {
+    "python": 107,
+    "web": 33,
+    "runtime": 5
+  },
+  "protocols": {
+    "agent_cards_checked": 8,
+    "mcp_tools_checked": 10,
+    "model": "fixture-no-llm"
+  },
+  "confirmed_partner_actions": {
+    "model": "fixture-no-llm",
+    "cycles": [
+      "bike:reserve",
+      "bike:start",
+      "bike:finish",
+      "parking:reserve",
+      "parking:start",
+      "parking:finish"
+    ],
+    "stock_restored": true,
+    "business_result_verified": true
+  },
+  "live": {
+    "status": "passed",
+    "mode": "ollama",
+    "model_simulated": false,
+    "purchase_created": false,
+    "cases": [
+      {
+        "question": "Peux-tu me donner le tarif du parking ?",
+        "evidence": {
+          "mcp_tools": [
+            "read_provider_context"
+          ],
+          "a2a_agents": [
+            "parking",
+            "tariffs"
+          ]
+        },
+        "elapsed_seconds": 78.31,
+        "answer": "Le tarif du parking est de **5,00 €** avant usage. Une validation transport acceptée et rapprochée ouvre une régularisation de **3,00 €**. Cette régularisation ne déclenche pas un remboursement bancaire automatique.\n\nSource : [parking-1](#parking-1)."
+      },
+      {
+        "question": "Y a-t-il une place disponible au parking ?",
+        "evidence": {
+          "mcp_tools": [
+            "read_provider_context"
+          ],
+          "a2a_agents": [
+            "mobility",
+            "parking"
+          ]
+        },
+        "elapsed_seconds": 30.89,
+        "answer": "Il y a actuellement **2 places disponibles** au parking, selon l'observation du **28 octobre 2026 à 07:44:48** (source : `partner-inventory:parking-relais`). \n\nLe prix de la place est de **5,00 €** avant usage, avec une régularisation possible de **2,00 €** si une validation transport est acceptée (source : `parking-1`). \n\nSouhaitez-vous que je vous aide à réserver une place ?"
+      },
+      {
+        "question": "Prépare une proposition transport, parking et vélo pour le 2026-10-29.",
+        "evidence": {
+          "mcp_tools": [
+            "prepare_quote",
+            "read_provider_context"
+          ],
+          "a2a_agents": [
+            "bike",
+            "mobility",
+            "parking",
+            "transport"
+          ]
+        },
+        "elapsed_seconds": 166.6,
+        "answer": "Proposition pour le 29/10/2026 :\n• Transport · réseau Alizé : 7,00 €. Source : tariff-1.\n• Parking relais : 5,00 €. Source : parking-1.\n• Vélo · après usage : après usage · 1,00 € + 0,20 €/minute commencée, plafond 5,00 €. Source : bike-1.\n\nÀ payer maintenant : 12,00 €.\nExaminez les produits, la date et le montant dans l’écran avant de confirmer. Aucune réservation ni commande n’a été effectuée."
+      },
+      {
+        "question": "Le parking a refusé mon accès. Vérifie le dossier avec son organisation.",
+        "evidence": {
+          "mcp_tools": [
+            "read_provider_context",
+            "search_tariffs"
+          ],
+          "a2a_agents": [
+            "parking",
+            "sav"
+          ]
+        },
+        "elapsed_seconds": 40.45,
+        "answer": "Veuillez vérifier avec l'organisation concernée si la validation transport a bien été effectuée."
+      },
+      {
+        "question": "Explique les commissions et la répartition par fournisseur de ma commande.",
+        "evidence": {
+          "mcp_tools": [
+            "read_provider_context",
+            "read_statement"
+          ],
+          "a2a_agents": [
+            "bike",
+            "clearing",
+            "parking",
+            "transport"
+          ]
+        },
+        "elapsed_seconds": 170.67,
+        "answer": "Voici une synthèse claire des commissions et de la répartition par fournisseur pour votre commande :\n\n---\n\n### **Répartition des commissions et des montants par fournisseur**\n\n#### **1. Transport**\n- **Contrat de distribution** : `distribution-transport-agency` (version 2026-demo-v1)\n  - **Commission** : 5,00 % pour le vendeur \"agency\".\n- **Montants** :\n  - **Prépayé** : 7,00 €\n  - **Commission du vendeur** : 0,35 €\n  - **Montant net à l'opérateur** : 6,65 €\n- **Source** : `tariff-1` (Gamme transport fictive)\n\n---\n\n#### **2. Vélo**\n- **Contrat de distribution** : `distribution-bike-agency` (version 2026-demo-v1)\n  - **Commission** : 5,00 % pour le vendeur \"agency\".\n- **Montants** :\n  - **Prépayé** : 0,00 €\n  - **Commission du vendeur** : 0,00 € (en attente)\n  - **Montant net à l'opérateur** : 0,00 € (en attente)\n  - **Postpaid due** : 3,00 €\n  - **Commission en attente** : 0,15 €\n  - **Opérateur en attente** : 2,85 €\n- **Source** : `bike-1` (Location vélo fictive)\n\n---\n\n#### **3. Parking**\n- **Contrat de distribution** : `distribution-parking-agency` (version 2026-demo-v1)\n  - **Commission** : 5,00 % pour le vendeur \"agency\".\n- **Montants** :\n  - **Prépayé** : 5,00 €\n  - **Commission du vendeur** : 0,25 €\n  - **Montant net à l'opérateur** : 4,75 €\n- **Source** : `parking-1` (Parking fictif)\n\n---\n\n### **Résumé global**\n- **Prépayé total** : 12,00 €\n- **Commission du vendeur** : 0,60 €\n- **Montant opérateur** : 11,40 €\n- **Vélo · Postpaid due** : 3,00 €\n- **Commission en attente (vélo)** : 0,15 €\n- **Opérateur en attente (vélo)** : 2,85 €\n\n---\n\n### **Notes**\n- **Vélo** : Créance simulée non encore encaissée ; aucun reversement bancaire réel.\n- **Commande** : `order-95cb13fb12085013a2e6e1c4f42dd62f`\n\nN'hésitez pas à me faire savoir si vous avez des questions supplémentaires !"
+      }
+    ]
+  },
+  "fixture_cases": [
+    {
+      "question": "Peux-tu me donner le tarif du parking ?",
+      "evidence": {
+        "a2a_agents": [
+          "parking",
+          "tariffs"
+        ],
+        "mcp_tools": [
+          "read_provider_context"
+        ]
+      }
+    },
+    {
+      "question": "Y a-t-il une place disponible au parking ?",
+      "evidence": {
+        "a2a_agents": [
+          "mobility",
+          "parking"
+        ],
+        "mcp_tools": [
+          "read_provider_context"
+        ]
+      }
+    },
+    {
+      "question": "Prépare une proposition transport, parking et vélo pour le 2026-10-29.",
+      "evidence": {
+        "a2a_agents": [
+          "bike",
+          "mobility",
+          "parking",
+          "transport"
+        ],
+        "mcp_tools": [
+          "prepare_quote",
+          "read_provider_context"
+        ]
+      }
+    },
+    {
+      "question": "Le parking a refusé mon accès. Vérifie le dossier avec son organisation.",
+      "evidence": {
+        "a2a_agents": [
+          "parking",
+          "sav"
+        ],
+        "mcp_tools": [
+          "read_provider_context",
+          "search_tariffs"
+        ]
+      }
+    },
+    {
+      "question": "Explique les commissions et la répartition par fournisseur de ma commande.",
+      "evidence": {
+        "a2a_agents": [
+          "bike",
+          "clearing",
+          "parking",
+          "transport"
+        ],
+        "mcp_tools": [
+          "read_provider_context",
+          "read_statement"
+        ]
+      }
+    }
+  ],
+  "visual_checks": [
+    "cooperation-proposition-2026-10-28.jpg",
+    "cooperation-panier-confirmation-2026-10-28.jpg"
+  ]
+}

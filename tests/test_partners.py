@@ -56,7 +56,7 @@ def test_reserve_replay_and_return_emit_one_event(sessions):
         assert len(events) == 1
         assert events[0].data["data"]["seconds"] == 600
         assert events[0].data["source"] == "urn:partner:bike"
-        assert len(db.get(Record, "inventory-alize-bike").data["available"]) == 2
+        assert len(db.get(Record, "inventory-alize-velo-partage").data["available"]) == 2
     with pytest.raises(HTTPException) as exc:
         apply(sessions, operation(sessions, "finish", key="contradictory-finish", seconds=601))
     assert exc.value.status_code == 409
@@ -68,12 +68,12 @@ def test_cancellation_restores_stock_and_new_reservation_identity(sessions):
     second = apply(sessions, operation(sessions, "reserve", key="reserve-after-cancel"))["booking"]
     assert second["reservation_id"] != first["reservation_id"]
     with sessions() as db:
-        assert len(db.get(Record, "inventory-alize-bike").data["available"]) == 1
+        assert len(db.get(Record, "inventory-alize-velo-partage").data["available"]) == 1
 
 
 def test_stock_empty_never_invents_a_resource(sessions):
     with sessions.begin() as db:
-        row = db.get(Record, "inventory-alize-bike")
+        row = db.get(Record, "inventory-alize-velo-partage")
         row.data = {**row.data, "available": []}
     with pytest.raises(HTTPException) as exc:
         apply(sessions, operation(sessions, "reserve"))
@@ -151,3 +151,17 @@ def test_agno_history_only_response_is_visible_without_echoing_user_message():
 def test_a2a_artifact_takes_precedence_over_history():
     task = {"artifacts": [{"parts": [{"kind": "text", "text": "Résultat final"}]}], "history": [{"role": "agent", "parts": [{"kind": "text", "text": "Message intermédiaire"}]}]}
     assert partners.task_explanation(task) == "Résultat final"
+
+
+def test_upgrade_copies_legacy_stock_once_without_resetting_it(sessions):
+    with sessions.begin() as db:
+        db.delete(db.get(Record, "inventory-alize-parking-relais"))
+        db.add(Record(id="inventory-alize-parking", kind="partner_inventory", data={"available": ["legacy-free-space"]}))
+    partners.initialize_inventory()
+    with sessions.begin() as db:
+        rec = db.get(Record, "inventory-alize-parking-relais")
+        assert rec.data["available"] == ["legacy-free-space"]
+        rec.data = {**rec.data, "available": []}
+    partners.initialize_inventory()
+    with sessions() as db:
+        assert db.get(Record, "inventory-alize-parking-relais").data["available"] == []

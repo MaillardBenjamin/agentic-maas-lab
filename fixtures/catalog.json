@@ -2,16 +2,184 @@
   "version": "2026-demo-v1",
   "currency": "EUR",
   "products": [
-    {"id": "transport", "name": "Transport · réseau Alizé", "actor": "transport", "price_cents": 1000, "student_bps": 3000, "young_bps": 2000, "young_under": 26},
-    {"id": "parking", "name": "Parking relais", "actor": "mobilities", "price_cents": 500, "validated_price_cents": 300},
-    {"id": "bike", "name": "Vélo · après usage", "actor": "mobilities", "price_cents": 0, "unlock_cents": 100, "minute_cents": 20, "cap_cents": 500}
+    {
+      "id": "transport",
+      "name": "Transport · réseau Alizé",
+      "actor": "transport-alize",
+      "price_cents": 1000,
+      "student_bps": 3000,
+      "young_bps": 2000,
+      "young_under": 26,
+      "provider": "transport",
+      "provider_org": "transport-alize",
+      "source": "tariff-1"
+    },
+    {
+      "id": "parking",
+      "name": "Parking relais",
+      "actor": "parking-relais",
+      "price_cents": 500,
+      "validated_price_cents": 300,
+      "provider": "parking",
+      "provider_org": "parking-relais",
+      "source": "parking-1"
+    },
+    {
+      "id": "bike",
+      "name": "Vélo · après usage",
+      "actor": "velo-partage",
+      "price_cents": 0,
+      "unlock_cents": 100,
+      "minute_cents": 20,
+      "cap_cents": 500,
+      "provider": "bike",
+      "provider_org": "velo-partage",
+      "source": "bike-1"
+    }
   ],
-  "sellers": {"agency": {"name": "Agence Alizé", "commission_bps": 500}, "app": {"name": "Application MaaS", "commission_bps": 200}},
+  "sellers": {
+    "agency": {
+      "name": "Agence Alizé",
+      "commission_bps": 500
+    },
+    "app": {
+      "name": "Application MaaS",
+      "commission_bps": 200
+    }
+  },
   "sources": [
-    {"id": "tariff-1", "title": "Gamme transport fictive", "text": "Le titre transport coûte 10 euros. Un étudiant avec droit valide bénéficie de 30 pour cent de réduction. Les moins de 26 ans bénéficient de 20 pour cent. Les réductions ne se cumulent pas ; le prix admissible le plus bas est retenu."},
-    {"id": "parking-1", "title": "Offre P+R fictive", "text": "Le parking coûte 5 euros avant usage. Une validation transport acceptée et rapprochée ouvre une régularisation de 2 euros. Cette régularisation ne déclenche pas un remboursement bancaire automatique."},
-    {"id": "bike-1", "title": "Location vélo fictive", "text": "Un euro de déverrouillage puis vingt centimes par minute commencée, avec un plafond de cinq euros. La facturation intervient après restitution confirmée."},
-    {"id": "distribution-1", "title": "Contrats vendeurs fictifs", "text": "Agence : commission de cinq pour cent. Application MaaS : deux pour cent. Assiette : prix net après régularisations ; arrondi au centime par ligne, moitié supérieure. Les anciennes commandes conservent la version du contrat accepté."},
-    {"id": "sav-1", "title": "Délégation SAV fictive", "text": "Un conseiller d'agence peut régulariser jusqu'à cinq euros sur une commande de son organisation. Au-delà, le superviseur doit confirmer l'opération exacte. Une demande répétée ne produit pas un deuxième remboursement."}
+    {
+      "id": "tariff-1",
+      "title": "Gamme transport fictive",
+      "text": "Le titre transport coûte 10 euros. Un étudiant avec droit valide bénéficie de 30 pour cent de réduction. Les moins de 26 ans bénéficient de 20 pour cent. Les réductions ne se cumulent pas ; le prix admissible le plus bas est retenu.",
+      "provider": "transport"
+    },
+    {
+      "id": "parking-1",
+      "title": "Offre P+R fictive",
+      "text": "Le parking coûte 5 euros avant usage. Une validation transport acceptée et rapprochée ouvre une régularisation de 2 euros. Cette régularisation ne déclenche pas un remboursement bancaire automatique.",
+      "provider": "parking"
+    },
+    {
+      "id": "bike-1",
+      "title": "Location vélo fictive",
+      "text": "Un euro de déverrouillage puis vingt centimes par minute commencée, avec un plafond de cinq euros. La facturation intervient après restitution confirmée.",
+      "provider": "bike"
+    },
+    {
+      "id": "distribution-1",
+      "title": "Contrats vendeurs fictifs",
+      "text": "Chaque ligne applique le contrat de distribution versionné entre son fournisseur et le vendeur. Le taux figure dans ce contrat, conservé dans le devis accepté. Assiette : prix net de la ligne après régularisations ; arrondi au centime par ligne, moitié supérieure. Une régularisation peut cibler un produit ; sinon elle est répartie au prorata des montants restant à régulariser. Les anciennes commandes conservent les contrats acceptés.",
+      "provider": "maas"
+    },
+    {
+      "id": "sav-1",
+      "title": "Délégation SAV fictive",
+      "text": "Un conseiller d'agence peut régulariser jusqu'à cinq euros sur une commande de son organisation. Au-delà, le superviseur doit confirmer l'opération exacte. Une demande répétée ne produit pas un deuxième remboursement.",
+      "provider": "maas"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "transport",
+      "org": "transport-alize",
+      "name": "Transport Alizé",
+      "agent": "transport",
+      "products": [
+        "transport"
+      ],
+      "distributors": [
+        "alize"
+      ],
+      "graph": "transport_demo"
+    },
+    {
+      "id": "parking",
+      "org": "parking-relais",
+      "name": "Parking relais",
+      "agent": "parking",
+      "products": [
+        "parking"
+      ],
+      "distributors": [
+        "alize"
+      ],
+      "graph": "parking_demo"
+    },
+    {
+      "id": "bike",
+      "org": "velo-partage",
+      "name": "Vélo partagé",
+      "agent": "bike",
+      "products": [
+        "bike"
+      ],
+      "distributors": [
+        "alize"
+      ],
+      "graph": "mobilites_demo"
+    }
+  ],
+  "distribution_contracts": [
+    {
+      "id": "distribution-transport-agency",
+      "version": "2026-demo-v1",
+      "provider": "transport",
+      "provider_org": "transport-alize",
+      "distributor_org": "alize",
+      "seller": "agency",
+      "commission_bps": 500,
+      "refund_allocation": "line_or_prorata"
+    },
+    {
+      "id": "distribution-transport-app",
+      "version": "2026-demo-v1",
+      "provider": "transport",
+      "provider_org": "transport-alize",
+      "distributor_org": "alize",
+      "seller": "app",
+      "commission_bps": 200,
+      "refund_allocation": "line_or_prorata"
+    },
+    {
+      "id": "distribution-parking-agency",
+      "version": "2026-demo-v1",
+      "provider": "parking",
+      "provider_org": "parking-relais",
+      "distributor_org": "alize",
+      "seller": "agency",
+      "commission_bps": 500,
+      "refund_allocation": "line_or_prorata"
+    },
+    {
+      "id": "distribution-parking-app",
+      "version": "2026-demo-v1",
+      "provider": "parking",
+      "provider_org": "parking-relais",
+      "distributor_org": "alize",
+      "seller": "app",
+      "commission_bps": 200,
+      "refund_allocation": "line_or_prorata"
+    },
+    {
+      "id": "distribution-bike-agency",
+      "version": "2026-demo-v1",
+      "provider": "bike",
+      "provider_org": "velo-partage",
+      "distributor_org": "alize",
+      "seller": "agency",
+      "commission_bps": 500,
+      "refund_allocation": "line_or_prorata"
+    },
+    {
+      "id": "distribution-bike-app",
+      "version": "2026-demo-v1",
+      "provider": "bike",
+      "provider_org": "velo-partage",
+      "distributor_org": "alize",
+      "seller": "app",
+      "commission_bps": 200,
+      "refund_allocation": "line_or_prorata"
+    }
   ]
 }

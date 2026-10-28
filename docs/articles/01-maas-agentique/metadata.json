@@ -1,0 +1,18 @@
+{
+  "status": "draft",
+  "author": "Benjamin Maillard",
+  "title": "MaaS agentique : des agents IA au service d’une billettique interopérable",
+  "excerpt": "Premier épisode d’un POC open source : agents IA, A2A, MCP et workflows durables pour explorer une billettique qui évolue vers les services et les aides du territoire.",
+  "category": "IA & Architecture",
+  "slug": "maas-agentique-billettique-interoperable",
+  "readTime": "11 min",
+  "readTimeBasis": "Estimation à 200 mots par minute, hors diagrammes.",
+  "date": null,
+  "proposedUrl": "https://benjamin-maillard.fr/?article=maas-agentique-billettique-interoperable",
+  "ogImage": "https://raw.githubusercontent.com/MaillardBenjamin/agentic-maas-lab/main/docs/ihm-automate-qr-2026-10-25.png",
+  "preparedAt": "2026-10-25",
+  "evidenceCutoff": "2026-10-25",
+  "evidenceRepositoryCommit": "a82418e",
+  "articleWordsWithoutDiagrams": 2060,
+  "linkedinCharacters": 1791
+}

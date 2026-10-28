@@ -6,5 +6,7 @@ RUN pip install --no-cache-dir -r requirements.lock
 COPY services/agents/ /app/
 COPY services/api/maas/ai.py /app/ai_policy.py
 COPY services/api/maas/partner_grants.py /app/partner_grants.py
+COPY services/api/maas/organizations.py /app/organizations.py
+COPY fixtures /app/fixtures
 COPY scripts/protocol_smoke.py /app/protocol_smoke.py
 CMD ["python", "main.py"]

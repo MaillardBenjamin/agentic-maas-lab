@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -15,7 +15,7 @@ from temporalio.client import Client
 from temporalio.common import WorkflowIDReusePolicy
 
 from maas.db import Record, Session, initialize
-from maas.domain import CATALOG, bike_price, digest, quote, settlement
+from maas.domain import CATALOG, allocate_refund, bike_price, digest, quote, settlement
 from maas.security import USERS, access, authorize, principal, service, token
 
 
@@ -49,7 +49,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="MaaS agentique · démonstrateur", version="0.1.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5190", "http://127.0.0.1:5190"], allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5190", "http://127.0.0.1:5190"], allow_methods=["GET", "POST", "DELETE"], allow_headers=["Authorization", "Content-Type", "X-Capture-Consent"])
 
 
 @app.middleware("http")
@@ -85,6 +85,7 @@ class Refund(BaseModel):
     amount_cents: int = Field(gt=0, le=100000)
     reason: str = Field(min_length=5, max_length=300)
     idempotency_key: str = Field(min_length=8, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
+    product: str | None = None
 
 
 class Event(BaseModel):
@@ -125,7 +126,7 @@ def catalog(user=Depends(principal)):
 def create_quote(body: QuoteRequest, user=Depends(principal)):
     if body.traveler not in USERS or USERS[body.traveler]["role"] != "traveler":
         raise HTTPException(422, "Voyageur inconnu")
-    if user["role"] == "traveler" and user["id"] != body.traveler:
+    if USERS[body.traveler]["org"] != user["org"] or (user["role"] == "traveler" and user["id"] != body.traveler):
         raise HTTPException(403, "Profil hors périmètre")
     try:
         result = quote(USERS[body.traveler], body.products, body.seller, body.travel_date)
@@ -136,6 +137,24 @@ def create_quote(body: QuoteRequest, user=Depends(principal)):
         db.add(Record(id=result["id"], kind="quote", data=result))
         log(db, "quote.created", {"quote_id": result["id"], "principal": user["id"], "total_cents": result["total_cents"]})
     return result
+
+
+class OfferRequest(BaseModel):
+    products: list[str] = Field(min_length=1, max_length=10)
+    travel_date: str
+
+
+@app.post("/api/assistant/quotes")
+def prepare_offer(body: OfferRequest, user=Depends(principal), x_maas_coordination: str = Header(default="")):
+    import jwt
+    from maas.organizations import read_scope
+    try:
+        scope = read_scope(x_maas_coordination, "maas-coordination", user)
+        if not scope.get("traveler"):
+            raise ValueError("Choisir le voyageur avant de préparer une offre")
+    except (jwt.PyJWTError, ValueError) as exc:
+        raise HTTPException(403, str(exc))
+    return create_quote(QuoteRequest(traveler=scope["traveler"], seller=scope["seller"], products=body.products, travel_date=body.travel_date), user)
 
 
 async def temporal():
@@ -308,9 +327,15 @@ def refund(oid: str, body: Refund, user=Depends(principal)):
                 return old.data
             if not rec.data["payment_count"] or body.amount_cents > rec.data["quote"]["total_cents"] - rec.data["refund_cents"]:
                 raise HTTPException(409, "Montant restant insuffisant")
-            value = {**rec.data, "refund_cents": rec.data["refund_cents"] + body.amount_cents}
+            lines = rec.data["quote"]["lines"]
+            previous = rec.data.get("refund_allocations", allocate_refund(lines, rec.data["refund_cents"]))
+            try:
+                allocated = allocate_refund(lines, body.amount_cents, previous, body.product)
+            except ValueError as exc:
+                raise HTTPException(409, str(exc))
+            value = {**rec.data, "refund_cents": rec.data["refund_cents"] + body.amount_cents, "refund_allocations": {p: previous.get(p, 0) + allocated.get(p, 0) for p in set(previous) | set(allocated)}}
             rec.data = value
-            result = {"id": rid, "order_id": oid, "amount_cents": body.amount_cents, "principal": user["id"], "reason": body.reason, "request_digest": fingerprint, "mode": "simulated_refund", "status": "recorded"}
+            result = {"id": rid, "order_id": oid, "amount_cents": body.amount_cents, "allocations": allocated, "principal": user["id"], "reason": body.reason, "request_digest": fingerprint, "mode": "simulated_refund", "status": "recorded"}
             db.add(Record(id=rid, kind="refund", data=result))
             log(db, "refund.recorded.simulated", result)
     except IntegrityError:
@@ -342,7 +367,7 @@ def integrations(user=Depends(principal)):
         ("OPA", "real", "Décisions Rego côté service SAV"),
         ("Carte et paiement", "simulated", "État indépendant du Worker ; aucun argent réel"),
         ("FalkorDB", "real", "Grilles par acteur, sources, index textuel et vecteurs lexicaux locaux"),
-        ("Agno / A2A / MCP", "real", "5 agents MaaS, 2 agents partenaires sur un runtime séparé, 8 outils MCP ; fournisseur : " + os.environ.get("AGENT_MODE", "disabled")),
+        ("Agno / A2A / MCP", "real", "5 coordinateurs, 3 agents d’organisation, points d’entrée d’exécution séparés et 10 outils MCP ; fournisseur : " + os.environ.get("AGENT_MODE", "disabled")),
         ("Partenaires vélo / parking", "simulated", "Agents A2A et MCP réels ; réservation et usage sur services fictifs avec état, confirmation limitée et reprise Temporal"),
         ("OpenAI", "configured" if ai else "unconfigured", "Mode cloud actif" if ai else "Clé présente mais fournisseur désactivé" if os.environ.get("OPENAI_API_KEY") else "Clé absente ; fournisseur désactivé"),
         ("Ollama", "configured" if local else "unconfigured", "Inférence locale : " + os.environ.get("OLLAMA_MODEL", "qwen3:14b") if local else "Option locale disponible via AGENT_MODE=ollama"),
@@ -417,3 +442,19 @@ register(app, get, temporal, log)
 
 from maas.partners import register as register_partners
 register_partners(app, temporal, log)
+
+# Local audiovisual perception remains outside financial workflows and agent tools.
+from maas.perception import register as register_perception
+register_perception(app)
+
+from maas.agent_activity import register as register_agent_activity
+register_agent_activity(app)
+
+from maas.agency import register as register_agency
+register_agency(app, log)
+
+from maas.live_audio import register as register_live_audio
+register_live_audio(app)
+
+from maas.providers import register as register_providers
+register_providers(app, get, statement)

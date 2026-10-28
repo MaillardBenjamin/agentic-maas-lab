@@ -25,12 +25,15 @@ def lexical_vector(text):
     return [v / norm for v in vector] if norm else None
 
 
-def graph():
-    return FalkorDB(host=os.environ.get("FALKOR_HOST", "falkor"), port=6379).select_graph("maas_demo")
+def graph(name="maas_demo"):
+    from maas.organizations import CATALOG
+    if name not in {"maas_demo", *(o["graph"] for o in CATALOG["organizations"])}:
+        raise ValueError("Graphe non autorisé")
+    return FalkorDB(host=os.environ.get("FALKOR_HOST", "falkor"), port=6379).select_graph(name)
 
 
-def search_sources(text):
-    g = graph()
+def search_sources(text, graph_name="maas_demo"):
+    g = graph(graph_name)
     tokens = terms(text)
     vector = lexical_vector(text)
     if not tokens:

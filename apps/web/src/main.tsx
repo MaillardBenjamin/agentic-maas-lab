@@ -6,14 +6,10 @@ import {
   Monitor,
   Headphones,
   Activity,
-  ArrowUpRight,
   Check,
   ShieldCheck,
   Clock,
   Search,
-  CreditCard,
-  Bike,
-  CarFront,
   Radio,
   RefreshCw,
 } from "lucide-react";
@@ -22,6 +18,9 @@ import { Assistant } from "./Assistant";
 import { DemoScope, type AIProvider } from "./DemoScope";
 import { PartnerPanel } from "./PartnerPanel";
 import { Kiosk } from "./Kiosk";
+import { Traveler } from "./Traveler";
+import { AgentActivity } from "./AgentActivity";
+import { AgencyDesk } from "./AgencyDesk";
 
 type Data = Record<string, any>;
 const money = (c: number) =>
@@ -43,34 +42,28 @@ function App() {
     [token, setToken] = useState(""),
     [orders, setOrders] = useState<Data[]>([]),
     [selected, setSelected] = useState(""),
-    [q, setQ] = useState<Data | null>(null),
     [statement, setStatement] = useState<Data | null>(null),
     [audit, setAudit] = useState<Data[]>([]),
     [integrations, setIntegrations] = useState<Data[]>([]),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
-    [consent, setConsent] = useState(false),
-    [pause, setPause] = useState(true),
-    [seller, setSeller] = useState("agency"),
     [query, setQuery] = useState("étudiant réduction"),
-    [sources, setSources] = useState<Data[]>([]),
-    [refund, setRefund] = useState("2.00");
+    [sources, setSources] = useState<Data[]>([]);
   const order = orders.find((o) => o.id === selected);
-  const [proofs, setProofs] = useState<Data[]>([]),
-    [paymentMode, setPaymentMode] = useState("local_simulator");
+  const [proofs, setProofs] = useState<Data[]>([]);
   const provider: AIProvider = integrations.some(i => i.name === "Ollama" && i.mode === "configured")
     ? "ollama"
     : integrations.some(i => i.name === "OpenAI" && i.mode === "configured") ? "openai" : "disabled";
   const bridgeEnabled = integrations.some(i => i.name === "Bridge" && i.mode === "configured");
-  async function api(path: string, method = "GET", body?: Data, t = token) {
+  async function api(path: string, method = "GET", body?: Data | Blob, t = token) {
     const res = await fetch("/api" + path, {
       method,
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": body instanceof Blob ? (body.type || "application/octet-stream") : "application/json", ...(body instanceof Blob ? { "X-Capture-Consent": "true" } : {}),
         ...(t ? { Authorization: "Bearer " + t } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof Blob ? body : body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json();
     if (!res.ok)
@@ -90,19 +83,14 @@ function App() {
     const data = await api("/demo/login/" + id, "POST", undefined, "");
     setToken(data.access_token);
     setIdentity(id);
-    setQ(null);
-    setConsent(false);
     setError("");
   }
-  useEffect(() => {
-    login("lea").catch((e) => setError(e.message));
-  }, []);
   async function refresh() {
     if (!token) return;
     const [o, i] = await Promise.all([api("/orders"), api("/integrations")]);
     setOrders(o);
     setIntegrations(i);
-    if (["sav", "console"].includes(view)) setAudit(await api("/audit"));
+    if (view === "console") setAudit(await api("/audit"));
     if (view === "console") setProofs(await api("/proofs"));
     if (selected) setStatement(await api("/orders/" + selected + "/statement"));
   }
@@ -128,36 +116,10 @@ function App() {
     setView(v);
     window.scrollTo(0, 0);
     setStatement(null);
-    login(v === "sav" ? "clerk" : v === "console" ? "demo" : "lea").catch((e) =>
+    if (v === "voyageur" || v === "sav") {
+      setToken(""); setOrders([]); setSelected(""); setError("");
+    } else login(v === "console" ? "demo" : "lea").catch((e) =>
       setError(e.message),
-    );
-  }
-  async function getQuote() {
-    setQ(
-      await api("/quotes", "POST", {
-        traveler: identity,
-        products: ["transport", "parking", "bike"],
-        seller,
-        travel_date: "2026-10-24",
-      }),
-    );
-    setConsent(false);
-  }
-  async function buy() {
-    if (!q || !consent) return;
-    const id = "purchase-" + q.id;
-    const o = await api("/orders", "POST", {
-      quote_id: q.id,
-      idempotency_key: id,
-      channel: view === "automate" ? "automate" : "web",
-      pause_before_issue: pause,
-      payment_mode: paymentMode,
-    });
-    setSelected(o.id);
-    setNotice(
-      paymentMode === "bridge_sandbox"
-        ? "Commande confirmée. Initiez ensuite le paiement dans Demo Bank."
-        : "Commande confirmée. Le paiement est encore à simuler.",
     );
   }
   async function event(type: string, suffix: string, extra: Data = {}) {
@@ -194,7 +156,7 @@ function App() {
           <Wind size={31} /> alizé<span>LAB</span>
         </a>
         <p className="aside-title">MOBILITÉ AUGMENTÉE</p>
-        <nav>
+        <nav aria-label="Espaces de démonstration">
           {nav.map(([id, title, Icon]) => (
             <button
               key={id}
@@ -216,7 +178,7 @@ function App() {
         </div>
       </aside>
       <main>
-        {view !== "automate" && <header>
+        {!["automate", "voyageur", "sav"].includes(view) && <header>
           <span>
             ESPACE DE DÉMONSTRATION <span className="slash">/</span>{" "}
             {nav.find((n) => n[0] === view)?.[1]}
@@ -232,16 +194,12 @@ function App() {
             </button>
           </div>
         </header>}
-        {view === "automate" ? <Kiosk provider={provider} bridgeEnabled={bridgeEnabled} /> : <div className="content">
+        {view === "voyageur" ? <Traveler /> : view === "automate" ? <Kiosk provider={provider} bridgeEnabled={bridgeEnabled} /> : view === "sav" ? <AgencyDesk /> : <div className="content">
           <div className="intro">
             <div>
               <p className="eyebrow">MAAS AGENTIQUE</p>
               <h1>
-                {view === "sav"
-                  ? "Chaque incident a une histoire."
-                  : view === "console"
-                    ? "Les opérations, à livre ouvert."
-                    : "Votre mobilité, en un seul endroit."}
+                {"Les opérations, à livre ouvert."}
               </h1>
               <p>
                 {view === "console"
@@ -280,34 +238,9 @@ function App() {
             key={identity}
             api={api}
             runtimeProvider={provider}
-            agent={
-              view === "sav"
-                ? "sav"
-                : view === "console"
-                  ? "clearing"
-                  : "conversation"
-            }
+            agent="clearing"
             orderId={selected}
           />
-          {view === "voyageur" && (
-            <label className="card payment-choice">
-              Mode de paiement de la commande
-              <select
-                value={paymentMode}
-                onChange={(e) => setPaymentMode(e.target.value)}
-              >
-                <option value="local_simulator">
-                  Simulation locale · sans banque
-                </option>
-                <option
-                  value="bridge_sandbox"
-                  disabled={!bridgeEnabled}
-                >
-                  {bridgeEnabled ? "Bridge Demo Bank · sandbox activée" : "Bridge Demo Bank · sandbox à configurer"}
-                </option>
-              </select>
-            </label>
-          )}
           <div className="toolbar">
             <label>
               Identité de démonstration{" "}
@@ -339,138 +272,11 @@ function App() {
             </label>
             <span className="muted">Identité locale simulée</span>
           </div>
-          {view === "voyageur" && (
-            <div className="grid">
-              <section className="card">
-                <div className="card-heading">
-                  <span className="number">01</span>
-                  <h2>Composer votre offre</h2>
-                  <span className="badge light">Parcours fixe</span>
-                </div>
-                <div className="journey">
-                  <div>
-                    <CarFront />
-                    <strong>Parking relais</strong>
-                    <span>Une journée</span>
-                  </div>
-                  <i />
-                  <div>
-                    <Ticket />
-                    <strong>Transport Alizé</strong>
-                    <span>Réseau fictif</span>
-                  </div>
-                  <i />
-                  <div>
-                    <Bike />
-                    <strong>Vélo partagé</strong>
-                    <span>Après usage</span>
-                  </div>
-                </div>
-                <label>
-                  Vendeur
-                  <select
-                    value={seller}
-                    onChange={(e) => {
-                      setSeller(e.target.value);
-                      setQ(null);
-                    }}
-                  >
-                    <option value="agency">
-                      Agence Alizé · commission 5 %
-                    </option>
-                    <option value="app">
-                      Application MaaS · commission 2 %
-                    </option>
-                  </select>
-                </label>
-                <button
-                  className="primary"
-                  disabled={busy}
-                  onClick={() => action(getQuote)}
-                >
-                  Calculer mon offre <ArrowUpRight size={17} />
-                </button>
-                <p className="small muted">
-                  Prix calculés par les règles métier.{" "}
-                  {provider === "disabled"
-                    ? "Le dialogue IA est désactivé dans la configuration."
-                    : "Les agents IA peuvent les expliquer dans l’espace de dialogue."}
-                </p>
-              </section>
-              <section className="card quote">
-                <div className="card-heading">
-                  <span className="number">02</span>
-                  <h2>Votre proposition</h2>
-                </div>
-                {q ? (
-                  <>
-                    <p className="small">Version {q.version}</p>
-                    {q.lines.map((l: Data) => (
-                      <div className="price-line" key={l.product}>
-                        <div>
-                          <strong>{l.name}</strong>
-                          <small>
-                            {l.rule === "standard"
-                              ? l.product === "bike"
-                                ? "1 € + 0,20 €/min, plafond 5 €"
-                                : l.rule
-                              : l.rule}
-                          </small>
-                        </div>
-                        <b>
-                          {l.product === "bike"
-                            ? "À l’usage"
-                            : money(l.amount_cents)}
-                        </b>
-                      </div>
-                    ))}
-                    <div className="total">
-                      <span>À payer avant usage</span>
-                      <strong>{money(q.total_cents)}</strong>
-                    </div>
-                    <label className="check">
-                      <input
-                        type="checkbox"
-                        checked={consent}
-                        onChange={(e) => setConsent(e.target.checked)}
-                      />{" "}
-                      Je confirme les produits et le prix de ce devis.
-                    </label>
-                    <label className="check small">
-                      <input
-                        type="checkbox"
-                        checked={pause}
-                        onChange={(e) => setPause(e.target.checked)}
-                      />{" "}
-                      Pause de démonstration après paiement
-                    </label>
-                    <button
-                      className="primary"
-                      disabled={busy || !consent}
-                      onClick={() => action(buy)}
-                    >
-                      Confirmer la commande <CreditCard size={17} />
-                    </button>
-                  </>
-                ) : (
-                  <div className="empty">
-                    <Ticket size={38} />
-                    <p>Votre devis apparaîtra ici.</p>
-                    <span>
-                      Les réductions sont évaluées à la date du voyage.
-                    </span>
-                  </div>
-                )}
-              </section>
-            </div>
-          )}
           <section className="card">
             <div className="card-heading">
               <span className="number">{view === "console" ? "01" : "03"}</span>
               <h2>
-                {view === "sav"
-                  ? "Dossiers et commandes"
-                  : "Commandes du parcours"}
+                {"Commandes du parcours"}
               </h2>
               <span className="badge light">État persistant</span>
             </div>
@@ -661,51 +467,7 @@ function App() {
                     )}
                   </div>
                 )}
-                {view === "sav" && (
-                  <div className="refund">
-                    <h3>Régularisation contrôlée par OPA</h3>
-                    <label>
-                      Montant en euros{" "}
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={refund}
-                        onChange={(e) => setRefund(e.target.value)}
-                      />
-                    </label>
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        action(async () => {
-                          await api(
-                            "/orders/" + selected + "/refunds",
-                            "POST",
-                            {
-                              amount_cents: Math.round(Number(refund) * 100),
-                              reason:
-                                "Régularisation de démonstration confirmée au guichet",
-                              idempotency_key:
-                                "sav-" +
-                                selected +
-                                "-" +
-                                Math.round(Number(refund) * 100),
-                            },
-                          );
-                          setNotice(
-                            "Régularisation simulée enregistrée. Répéter la même demande ne la double pas.",
-                          );
-                        })
-                      }
-                    >
-                      Confirmer la régularisation simulée
-                    </button>
-                    <p className="small muted">
-                      Le conseiller est limité à 5 €. Un refus ne modifie aucun
-                      montant. Aucun remboursement bancaire réel.
-                    </p>
-                  </div>
-                )}
+
               </div>
             )}
           </section>
@@ -817,7 +579,7 @@ function App() {
               )}
             </section>
           )}
-          {["sav", "console"].includes(view) && (
+          {view === "console" && (
             <section className="card">
               <div className="card-heading">
                 <Clock size={19} />
@@ -843,6 +605,7 @@ function App() {
             </span>
           </footer>
         </div>}
+        {token && !["voyageur", "automate", "sav"].includes(view) && <AgentActivity key={view + identity} api={api} />}
       </main>
     </div>
   );

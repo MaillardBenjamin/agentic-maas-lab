@@ -10,7 +10,7 @@ parser.add_argument("provider", choices=["openai", "ollama"])
 parser.add_argument("--agent", choices=["tariffs", "conversation"], default="conversation")
 args = parser.parse_args()
 base = os.environ.get("API_URL", "http://api:8000")
-with httpx.Client(timeout=310) as client:
+with httpx.Client(timeout=610) as client:
     login = client.post(base + "/api/demo/login/lea")
     login.raise_for_status()
     headers = {"Authorization": "Bearer " + login.json()["access_token"]}
@@ -24,8 +24,8 @@ with httpx.Client(timeout=310) as client:
     expected = "ollama_local" if args.provider == "ollama" else "openai_via_agno"
     assert value["mode"] == expected, "Unexpected inference provider"
     assert "SIMULATION DE MODÈLE" not in value["text"]
-    assert "read_catalog" in value["evidence"]["mcp_tools"], value
-    assert "search_tariffs" in value["evidence"]["mcp_tools"], value
+    assert "read_provider_context" in value["evidence"]["mcp_tools"], value
+    assert "transport" in value["evidence"]["a2a_agents"], value
     assert "tariff-1" in value["text"] and "7" in value["text"], value
     if args.agent == "conversation":
         assert "tariffs" in value["evidence"]["a2a_agents"], value

@@ -1,0 +1,42 @@
+.activity-launch { position: fixed; right: 24px; bottom: 25px; z-index: 60; display: flex; align-items: center; gap: 9px; padding: 13px 18px; border: 1px solid #b8ccb4; border-radius: 30px; background: #173f32; color: #fff; box-shadow: 0 5px 25px #173f3224; font-size: 12px; }
+.activity-panel { position: fixed; top: 24px; right: 22px; bottom: 25px; width: min(440px, calc(100vw - 32px)); z-index: 80; background: #f9fbf7; border: 1px solid #c8d7c2; border-radius: 16px; box-shadow: 0 16px 60px #153b3540; display: flex; flex-direction: column; color: #244d39; text-align: left; }
+.activity-header { display: flex; flex-shrink: 0; height: auto; min-height: 85px; align-items: center; justify-content: space-between; padding: 22px; border-bottom: 1px solid #dde6d7; background: #eff5e9; border-radius: 16px 16px 0 0; letter-spacing: 0; }
+.activity-header > div { display: block; min-width: 0; }
+.activity-header h2 svg { flex-shrink: 0; }
+.activity-header h2 { display: flex; gap: 9px; align-items: center; font-size: 18px; margin: 7px 0 0; }
+.activity-header button { border: 0; background: transparent; padding: 8px; color: #315a41; }
+.activity-eyebrow { font-size: 9px; letter-spacing: 1.7px; }
+.activity-scroll { overflow: auto; padding: 20px; overscroll-behavior: contain; }
+.activity-connection { display: flex; align-items: center; gap: 7px; font-size: 10px; color: #6b785e; margin: 0 0 12px; }
+.activity-connection > span { border-radius: 50%; width: 7px; height: 7px; background: #849078; }
+.activity-connection.connected > span { background: #43895a; }
+.activity-connection.disconnected > span { background: #b06c35; }
+.activity-intro, .activity-empty { font-size: 12px; line-height: 1.7; }
+.activity-select { display: block; margin: 18px 0; font-size: 10px; }
+.activity-select select { width: 100%; margin-top: 6px; background: white; font-size: 11px; }
+.activity-actors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 19px 0; }
+.activity-actor { display: flex; flex-direction: column; gap: 6px; border: 1px solid #e0e7d9; background: #fff; border-radius: 9px; padding: 11px 7px; min-width: 0; }
+.activity-actor strong { font-size: 10px; }
+.activity-actor small { font-size: 9px; color: #798570; }
+.activity-actor.idle { opacity: .6; }
+.activity-actor.started { background: #e7f1df; border-color: #82a870; }
+.activity-actor.failed { border-color: #c58f78; background: #f9eee7; }
+.activity-run { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 15px 0; border-top: 1px solid #dce5d5; }
+.activity-run > strong { font-size: 12px; margin-right: auto; }
+.activity-run > small { flex-basis: 100%; font-size: 10px; color: #70806b; }
+.activity-phase { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: #4e6b42; }
+.activity-phase.failed { color: #a35732; }
+.activity-exchanges { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.activity-exchanges li { border: 1px solid #dce6d3; background: #fff; border-left: 3px solid #89ac74; border-radius: 8px; padding: 13px; }
+.activity-exchanges li.started { border-left-color: #327047; background: #f0f6ea; }
+.activity-exchanges li.failed { border-left-color: #ad6341; }
+.activity-exchange-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.activity-protocol { color: #5c7352; background: #edf2e7; border-radius: 4px; font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 3px 6px; }
+.activity-exchanges li p { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 10px 0 7px; font-size: 11px; }
+.activity-exchanges li > small { font-size: 10px; color: #718168; }
+.activity-footnote, .activity-warning { font-size: 10px; line-height: 1.7; color: #7c8774; margin-top: 20px; }
+.activity-warning { color: #9b653f; }
+.activity-spin { animation: activity-turn 1.4s linear infinite; }
+@keyframes activity-turn { to { transform: rotate(360deg); } }
+@media (max-width: 720px) { .activity-launch { bottom: 85px; right: 14px; padding: 11px 13px; font-size: 11px; } .activity-panel { top: 12px; right: 10px; bottom: 79px; width: calc(100vw - 20px); } .activity-header { padding: 16px; } .activity-scroll { padding: 16px; } .activity-actors { grid-template-columns: repeat(3, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .activity-spin { animation: none; } }

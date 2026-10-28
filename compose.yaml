@@ -8,6 +8,7 @@ x-app: &app
     DATABASE_URL: postgresql+psycopg://maas:${POSTGRES_PASSWORD:-local-maas-only}@postgres/maas
     JWT_SECRET: ${JWT_SECRET:-local-demo-change-before-exposure-0123456789}
     SERVICE_TOKEN: ${SERVICE_TOKEN:-local-services-only-0123456789}
+    ACTIVITY_TOKEN: ${ACTIVITY_TOKEN:-local-activity-only-0123456789}
     TEMPORAL_ADDRESS: temporal:7233
     OPA_URL: http://opa:8181
     FALKOR_HOST: falkor
@@ -68,6 +69,7 @@ services:
       - ./policies:/policies:ro
   api:
     <<: *app
+    networks: [default, perception]
     environment:
       <<: *env
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
@@ -75,6 +77,8 @@ services:
       AGENT_MODE: ${AGENT_MODE:-disabled}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6-luna}
+      OPENAI_LIVE_AUDIO_ENABLED: ${OPENAI_LIVE_AUDIO_ENABLED:-false}
+      OPENAI_REALTIME_MODEL: ${OPENAI_REALTIME_MODEL:-gpt-realtime-2.1-mini}
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
       AI_MONTHLY_BUDGET_EUR: ${AI_MONTHLY_BUDGET_EUR:-50}
@@ -137,12 +141,41 @@ services:
       context: .
       dockerfile: services/keyple/Dockerfile
     image: maas-demo-keyple:0.1.0
+  perception:
+    profiles: [perception]
+    build:
+      context: .
+      dockerfile: services/perception/Dockerfile
+    image: maas-demo-perception:0.1.0
+    networks: [perception]
+    environment:
+      SERVICE_TOKEN: ${SERVICE_TOKEN:-local-services-only-0123456789}
+      MODEL_DIR: /models
+      NUMBA_CACHE_DIR: /tmp/numba
+      XDG_CACHE_HOME: /tmp/cache
+    volumes:
+      - ./data/perception/models:/models:ro
+    read_only: true
+    user: "65532:65532"
+    tmpfs: ["/tmp:size=256m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 5g
+    cpus: 3
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, python, -c, "import json,urllib.request; assert json.load(urllib.request.urlopen('http://localhost:8005/health'))['ready']"]
+      interval: 10s
+      timeout: 3s
+      start_period: 45s
+      retries: 6
   agents:
     build:
       context: .
       dockerfile: services/agents/Dockerfile
     image: maas-demo-agents:0.1.0
     environment: &agent-env
+      ACTIVITY_TOKEN: ${ACTIVITY_TOKEN:-local-activity-only-0123456789}
       JWT_SECRET: ${JWT_SECRET:-local-demo-change-before-exposure-0123456789}
       API_URL: http://api:8000
       AGENT_MODE: ${AGENT_MODE:-disabled}
@@ -237,6 +270,9 @@ services:
     security_opt: [no-new-privileges:true]
     volumes:
       - ./artifacts:/artifacts
+networks:
+  perception:
+    internal: true
 volumes:
   postgres:
   falkor:

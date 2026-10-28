@@ -21,29 +21,33 @@ Sources principales : [API](../../services/api/maas/api.py), [règles tarifaires
 
 | Agent | Rôle dans le POC |
 |---|---|
-| Accueil conversationnel | Comprend la demande et délègue les questions tarifaires. |
-| Tarifs | Consulte catalogue et sources pour expliquer les montants. |
-| Assistance SAV | Consulte le dossier, les règles et le relevé pour préparer l’intervention du conseiller. |
-| Commissions | Explique les calculs fournis par les services. |
-| Coordination MaaS | Délègue une opération partenaire déjà confirmée. |
-| Vélo et parking | Sur le runtime partenaire séparé, consultent la disponibilité et appellent l’outil de l’action autorisée.  |
+| Accueil conversationnel | Délègue selon l’intention à Tarifs, SAV, Commissions ou MaaS. |
+| Coordination Tarifs | Consulte via A2A les organisations concernées ; rassemble les tarifs sourcés. |
+| Coordination SAV | Consulte le périmètre du dossier propre à chaque fournisseur et prépare la réponse du conseiller. |
+| Coordination Commissions | Consulte les contrats et parts des fournisseurs ; explique le relevé déterministe. |
+| Coordination commerciale MaaS | Consulte les disponibilités et prépare un devis à examiner avant confirmation. |
+| Transport, Parking et Vélo | Représentent chacun une organisation ; consultent leurs offres, sources, stocks et lignes du dossier sélectionné. |
+| Exécution MaaS et opérations Vélo/Parking | Points d’entrée distincts, accessibles uniquement avec une action confirmée et une autorisation signée. |
 
-Les cinq premiers sont exposés par `agents`, les deux derniers par `partners`. Leur séparation rend visible la coopération distante entre services.
+Les coordinateurs sont exposés par `agents`, les agents d’organisation par `partners`. Les compétences sont regroupées dans deux runtimes ; leur identité et leurs droits restent distincts. Le registre publié dans `fixtures/catalog.json` relie fournisseur, organisation, produits, agent et graphe documentaire. `org` désigne le distributeur MaaS, `provider_org` le fournisseur : ces identités ne sont pas interchangeables.
 
 Le fournisseur de modèle peut être **Ollama**, avec une inférence sur le Mac, ou **OpenAI**, via une API cloud. Les tests de protocole peuvent employer un double de modèle déterministe pour isoler les tests de protocole. Les identités et droits métier sont vérifiés par les services.
 
-**FastMCP** expose deux familles d’outils :
+**FastMCP** expose des outils aux droits distincts :
 
-- `mcp` : quatre lectures — catalogue, sources, commande et relevé — avec le jeton utilisateur délégué.
-- `partner-mcp` : disponibilité et action pour chacun des partenaires vélo et parking. Les actions sont limitées par une autorisation signée de courte durée, préparée après confirmation dans l’interface.
+- `mcp` : catalogue publié, règles MaaS, commande, relevé et préparation d’un devis sans achat. Le voyageur et le vendeur de ce devis viennent du contexte de session signé.
+- `partner-mcp` : `read_provider_context` consulte uniquement l’organisation désignée par une délégation de lecture signée : offres, sources GraphRAG, disponibilité observée, contrats et, si sélectionné, lignes de commande, usages et relevé de ce fournisseur.
+- Les quatre outils d’exécution vélo/parking restent liés à une opération confirmée. Un jeton de consultation ne peut pas les autoriser.
 
-Les outils passent par les API métier, qui contrôlent les accès aux données. Sources : [agents et AgentOS](../../services/agents/main.py), [MCP de lecture](../../services/agents/mcp_server.py), [MCP partenaire](../../services/agents/partner_mcp_server.py).
+Une consultation de prix ou de disponibilité ne nécessite aucune commande existante. Pour une action d’usage, le droit délivré reste obligatoire. Le devis ne garantit pas une réservation. Les API métier contrôlent les accès ; les calculs et reçus persistent indépendamment du texte produit par le modèle. Sources : [agents](../../services/agents/main.py), [consultation fournisseur](../../services/api/maas/providers.py), [délégations](../../services/api/maas/organizations.py).
 
 ## Recherche et connaissance
 
-**FalkorDB** (`falkor`) stocke le graphe des acteurs, grilles, produits et sources documentaires. Il aide à retrouver les règles applicables et leurs liens.
+**FalkorDB** (`falkor`) sépare les corpus `maas_demo`, `transport_demo`, `parking_demo` et `mobilites_demo` (vélo). Le serveur choisit le graphe depuis le fournisseur autorisé ; le modèle ne choisit pas librement un graphe. Chaque corpus fournisseur contient ses acteurs, grilles, produits et sources documentaires. Il aide à retrouver les règles applicables et leurs liens.
 
 Le POC combine recherche textuelle, vecteurs lexicaux locaux de 96 dimensions et traversée du graphe. Les vecteurs représentent les mots présents dans les sources. Ce mécanisme sert de base à une démarche GraphRAG : retrouver des sources reliées avant de produire une réponse. Les références retrouvées permettent de relier l’explication aux sources.
+
+Chaque ligne de devis conserve son fournisseur et un instantané du contrat de distribution. Le relevé ventile prix net, régularisation, commission et part fournisseur ; les anciennes commandes conservent leurs conditions. Une régularisation peut cibler un produit ; sinon elle est ventilée au prorata des montants restants, avec conservation des centimes.
 
 Le tarif est calculé à partir du [catalogue structuré](../../fixtures/catalog.json), projeté dans le graphe par le chargement initial. Sources : [recherche](../../services/api/maas/knowledge.py), [chargement](../../scripts/seed.py).
 

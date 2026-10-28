@@ -14,12 +14,15 @@ from sqlalchemy.dialects.postgresql import insert
 from temporalio.common import WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
+from maas import agent_activity
 from maas.ai import chat_backend
 from maas.budget import reserve
 from maas.db import Record, Session
 from maas.domain import digest
 from maas.events import store_event
 from maas.partner_grants import grant_for, read_grant
+from maas.organizations import organization
+from maas.providers import inventory_id
 from maas.security import access, principal, service, token
 
 
@@ -37,7 +40,9 @@ def task_explanation(task):
 def initialize_inventory():
     with Session.begin() as db:
         for partner in ("bike", "parking"):
-            values = {"id": "inventory-alize-" + partner, "kind": "partner_inventory", "data": {"partner": partner, "org": "alize", "available": [partner + "-demo-1", partner + "-demo-2"]}}
+            # Copy a legacy stock once; never reset reservations on an upgrade.
+            legacy = db.get(Record, "inventory-alize-" + partner)
+            values = {"id": inventory_id("alize", partner), "kind": "partner_inventory", "data": {"partner": partner, "org": "alize", "provider_org": organization(partner)["org"], "available": list(legacy.data["available"]) if legacy else [partner + "-demo-1", partner + "-demo-2"]}}
             if db.bind.dialect.name == "postgresql":
                 db.execute(insert(Record).values(**values).on_conflict_do_nothing(index_elements=["id"]))
             elif not db.get(Record, values["id"]):
@@ -82,7 +87,7 @@ def prepare_operation(db, oid, body, user, log, test_only=False):
         if existing.data["request_digest"] != fingerprint:
             raise HTTPException(409, "Clé partenaire déjà liée à une autre demande")
         return existing.data
-    value = {"id": oid_key, "order_id": oid, "org": user["org"], "partner": body.partner, "action": body.action, "duration_seconds": body.duration_seconds, "actor": {k: user[k] for k in ("id", "role", "org")}, "request_digest": fingerprint, "test_only": test_only, "requested_backend": "fixture-no-llm" if test_only else chat_backend(), "status": "queued", "created_at": now(), "availability_checked": False, "effect_count": 0}
+    value = {"id": oid_key, "order_id": oid, "org": user["org"], "provider_org": organization(body.partner, user["org"])["org"], "partner": body.partner, "action": body.action, "duration_seconds": body.duration_seconds, "actor": {k: user[k] for k in ("id", "role", "org")}, "request_digest": fingerprint, "test_only": test_only, "requested_backend": "fixture-no-llm" if test_only else chat_backend(), "status": "queued", "created_at": now(), "availability_checked": False, "effect_count": 0}
     db.add(Record(id=oid_key, kind="partner_operation", data=value))
     log(db, "partner.operation.confirmed", {"order_id": oid, "org": user["org"], "operation_id": oid_key, "partner": body.partner, "action": body.action, "test_only": test_only})
     return value
@@ -158,10 +163,10 @@ def apply_operation(db, claims, partner, log):
     if not op["availability_checked"]:
         raise HTTPException(409, "Consulter d’abord la disponibilité via MCP")
     # Common lock order for both operators; serializes stock changes across orders.
-    inventory = record(db, "inventory-" + op["org"] + "-" + partner, "partner_inventory", lock=True)
+    inventory = record(db, inventory_id(op["org"], partner), "partner_inventory", lock=True)
     bid = "partner-booking-" + digest({"org": op["org"], "order_id": order["id"], "partner": partner})
     booking = db.get(Record, bid)
-    before = booking.data if booking else {"id": bid, "order_id": order["id"], "org": op["org"], "partner": partner}
+    before = booking.data if booking else {"id": bid, "order_id": order["id"], "org": op["org"], "provider_org": organization(partner, op["org"])["org"], "partner": partner}
     value, stock, changed = transition(before, inventory.data["available"], op["action"], op["duration_seconds"], bid)
     if order["state"] != "fulfilled" or partner not in [p["product"] for p in order["quote"]["lines"]]:
         raise HTTPException(409, "Droit partenaire non délivré")
@@ -199,31 +204,33 @@ async def dispatch_operation(opid, log, fixture=False):
         raise HTTPException(503, "Fournisseur modifié depuis la confirmation ; aucun basculement automatique")
     if backend == "openai_via_agno":
         reserve(100)
-    request_id = str(uuid.uuid4())
-    message = f"Opération confirmée {opid}. Partenaire {op['partner']}, action {op['action']}. Délègue au partenaire correspondant et rapporte son résultat sans inventer de succès."
-    payload = {"jsonrpc": "2.0", "id": request_id, "method": "message/send", "params": {"message": {"messageId": request_id, "role": "user", "parts": [{"kind": "text", "text": message}]}}}
-    target = os.environ.get("PARTNER_FIXTURE_A2A_URL", "http://agent-fixture:8002") if fixture else "http://agents:8002"
-    async with httpx.AsyncClient(timeout=360) as client:
-        response = await client.post(target + "/a2a/agents/mobility/v1/message:send", json=payload, headers={"Authorization": "Bearer " + token(op["actor"]), "X-MaaS-Partner-Grant": grant_for(op)})
-        response.raise_for_status()
-        task = response.json().get("result", {})
-    tools = sorted(set(filter(None, response.headers.get("X-MaaS-MCP-Tools", "").split(","))))
-    delegates = list(filter(None, response.headers.get("X-MaaS-A2A-Agents", "").split(",")))
-    required = {op["partner"] + "_availability", op["partner"] + "_apply"}
-    if response.headers.get("X-MaaS-Runtime-Mode") != ("fixture" if fixture else "ollama" if backend == "ollama_local" else "openai"):
-        raise HTTPException(503, "Fournisseur du runtime différent de celui confirmé")
-    if task.get("status", {}).get("state") != "completed" or op["partner"] not in delegates or not required.issubset(tools):
-        raise HTTPException(503, "Parcours A2A/MCP incomplet ; aucun succès déduit du texte IA")
-    with Session.begin() as db:
-        rec = record(db, opid, "partner_operation", lock=True)
-        if rec.data["status"] == "failed":
-            return rec.data
-        if not rec.data.get("result"):
-            raise HTTPException(503, "Agent terminé sans effet métier vérifié")
-        value = {**rec.data, "status": "completed", "mode": backend, "model": response.headers.get("X-MaaS-Model"), "provider": response.headers.get("X-MaaS-Provider"), "evidence": {"a2a_agents": ["mobility", *delegates], "mcp_tools": tools, "partner_runtime": "separate", "business_result_verified": True}, "explanation": task_explanation(task), "completed_at": now()}
-        rec.data = value
-        log(db, "partner.a2a.completed", {"order_id": op["order_id"], "org": op["org"], "operation_id": opid, "partner": op["partner"], "mode": backend, "mcp_tools": tools})
-    return value
+    activity_id = agent_activity.start(op["actor"], "Coopération vélo" if op["partner"] == "bike" else "Coopération parking", backend)
+    with agent_activity.exchange(activity_id, op["actor"], "A2A", "interface", "mobility"):
+        request_id = str(uuid.uuid4())
+        message = f"Opération confirmée {opid}. Partenaire {op['partner']}, action {op['action']}. Délègue au partenaire correspondant et rapporte son résultat sans inventer de succès."
+        payload = {"jsonrpc": "2.0", "id": request_id, "method": "message/send", "params": {"message": {"messageId": request_id, "role": "user", "parts": [{"kind": "text", "text": message}]}}}
+        target = os.environ.get("PARTNER_FIXTURE_A2A_URL", "http://agent-fixture:8002") if fixture else "http://agents:8002"
+        async with httpx.AsyncClient(timeout=360) as client:
+            response = await client.post(target + "/a2a/agents/mobility_operations/v1/message:send", json=payload, headers={"Authorization": "Bearer " + token(op["actor"]), "X-MaaS-Partner-Grant": grant_for(op), "X-MaaS-Activity-ID": activity_id})
+            response.raise_for_status()
+            task = response.json().get("result", {})
+        tools = sorted(set(filter(None, response.headers.get("X-MaaS-MCP-Tools", "").split(","))))
+        delegates = list(filter(None, response.headers.get("X-MaaS-A2A-Agents", "").split(",")))
+        required = {op["partner"] + "_availability", op["partner"] + "_apply"}
+        if response.headers.get("X-MaaS-Runtime-Mode") != ("fixture" if fixture else "ollama" if backend == "ollama_local" else "openai"):
+            raise HTTPException(503, "Fournisseur du runtime différent de celui confirmé")
+        if task.get("status", {}).get("state") != "completed" or op["partner"] not in delegates or not required.issubset(tools):
+            raise HTTPException(503, "Parcours A2A/MCP incomplet ; aucun succès déduit du texte IA")
+        with Session.begin() as db:
+            rec = record(db, opid, "partner_operation", lock=True)
+            if rec.data["status"] == "failed":
+                return rec.data
+            if not rec.data.get("result"):
+                raise HTTPException(503, "Agent terminé sans effet métier vérifié")
+            value = {**rec.data, "status": "completed", "mode": backend, "model": response.headers.get("X-MaaS-Model"), "provider": response.headers.get("X-MaaS-Provider"), "evidence": {"a2a_agents": ["mobility", *delegates], "mcp_tools": tools, "partner_runtime": "separate", "business_result_verified": True}, "explanation": task_explanation(task), "completed_at": now()}
+            rec.data = value
+            log(db, "partner.a2a.completed", {"order_id": op["order_id"], "org": op["org"], "operation_id": opid, "partner": op["partner"], "mode": backend, "mcp_tools": tools})
+        return value
 
 
 def register(app, temporal, log):
@@ -242,7 +249,7 @@ def register(app, temporal, log):
             access(user, record(db, oid, "order").data)
             bookings = [r.data for r in db.scalars(select(Record).where(Record.kind == "partner_booking")) if r.data["order_id"] == oid]
             operations = [r.data for r in db.scalars(select(Record).where(Record.kind == "partner_operation").order_by(Record.created_at.desc())) if r.data["order_id"] == oid]
-            availability = {p: len(record(db, "inventory-" + user["org"] + "-" + p, "partner_inventory").data["available"]) for p in ("bike", "parking")}
+            availability = {p: len(record(db, inventory_id(user["org"], p), "partner_inventory").data["available"]) for p in ("bike", "parking")}
             return {"bookings": bookings, "operations": operations, "availability": availability, "simulation": True}
 
     @app.post("/api/orders/{oid}/partner-operations")
@@ -287,7 +294,7 @@ def register(app, temporal, log):
     def availability(partner: Literal["bike", "parking"], claims=Depends(tool_principal)):
         with Session.begin() as db:
             rec, order = scoped_operation(db, claims, partner, lock=True)
-            stock = record(db, "inventory-" + order["org"] + "-" + partner, "partner_inventory").data
+            stock = record(db, inventory_id(order["org"], partner), "partner_inventory").data
             rec.data = {**rec.data, "availability_checked": True}
             return {"partner": partner, "available_count": len(stock["available"]), "simulation": True, "confirmed_action": rec.data["action"], "operation_id": rec.id}
 

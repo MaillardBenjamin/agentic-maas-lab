@@ -23,6 +23,17 @@ La licence MIT du code original n'altère pas les licences des composants ci-des
 | React / Vite / Lucide | 19.1.0 / 6.4.5 / 0.468.0 | MIT / MIT / ISC |
 | Harness² | 0.1.0, commit `1cfe254e8d25b15f37048c3730134686abe60335` | Apache-2.0 ; ses dépendances et benchmarks conservent leurs notices |
 | Bridge | API `2025-01-15` | Service sous conditions du prestataire, aucune licence MIT sur l'API |
+| Whisper-Flamingo / mWhisper-Flamingo | `a0e7e47f9ab6e3f076ca3473812ce8c70003e1f1` | BSD-3-Clause ; code incorporé sous MIT / Apache-2.0, notices conservées dans `/opt/whisper-flamingo/LICENSE` |
+| AV-HuBERT, branche muavic | `e8a6d4202c208f1ec10f5d41a66a61f96d1c442f` | Licence AV-HuBERT, recherche non commerciale uniquement ; exclut notamment production et exploitation commerciale ; `/opt/av_hubert/LICENSE` |
+| Fairseq | `272c4c5197250997148fb12c0db6306035f166a4` | MIT ; source du sous-module et notices conservées dans l’image |
+| dlib | 19.24.6 | Boost Software License ; le prédicteur facial 68 points utilise des données iBUG avec des conditions distinctes d’usage non commercial |
+| Lipreading using Temporal Convolutional Networks | ressource `20words_mean_face.npy`, empreinte dans `services/perception/assets.json` | Licence à base BSD avec clauses supplémentaires de recherche/étude et de prototype comparatif ; ressource téléchargée séparément |
+
+### Perception audiovisuelle facultative
+
+« AV-HuBERT is licensed under the AV-HuBERT license, Copyright (c) Meta Platforms, Inc. All Rights Reserved. » Le moteur est destiné ici à l’expérimentation locale non commerciale. La licence du projet Alizé ne remplace pas celle d’AV-HuBERT ni les conditions des poids et données de MuAViC. Les licences sont conservées dans les clones officiels intégrés à l’image. Les adaptations locales sont signalées dans les fichiers modifiés par `services/perception/patch_upstream.py`.
+
+Sources : [licence AV-HuBERT](https://github.com/facebookresearch/av_hubert/blob/e8a6d4202c208f1ec10f5d41a66a61f96d1c442f/LICENSE), [licences Whisper-Flamingo](https://github.com/roudimit/whisper-flamingo/blob/a0e7e47f9ab6e3f076ca3473812ce8c70003e1f1/LICENSE), [conditions du prédicteur dlib](https://github.com/davisking/dlib-models#shape_predictor_68_face_landmarksdatbz2), [licence de la ressource de visage moyen](https://github.com/mpc001/Lipreading_using_Temporal_Convolutional_Networks/blob/master/LICENSE). Les poids et les vidéos d’essai ne sont pas redistribués dans Git.
 
 Les sources de Harness² sont téléchargées depuis le dépôt officiel lors de la construction du laboratoire ; leur licence est conservée dans l'image à `/opt/harness2/LICENSE`. Aucune clé ni socket Docker n'est monté dans le laboratoire. Le runtime est sans réseau et ses éditeurs sont déterministes ; l'adaptateur MaaS est du code original.
 
