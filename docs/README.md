@@ -7,6 +7,7 @@
 | Besoin | Document |
 |---|---|
 | Installer et démarrer | [README du projet](../README.md#démarrer) |
+| Voir les parcours en vidéo | [Démonstration commentée en français, 3 min 04](videos/README.md) |
 | Présenter les parcours dans l’interface | [Guide de démonstration](guide-demonstration.md) |
 | Mettre à jour, configurer et vérifier | [Exploitation et vérifications](exploitation-et-verification.md) |
 | Comprendre les responsabilités et les échanges | [Dossier d’architecture](architecture/README.md) |

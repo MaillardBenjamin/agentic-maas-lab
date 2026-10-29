@@ -8,6 +8,8 @@ POC de billettique interopérable, code original sous licence MIT, porté par Be
 
 **Documentation actualisée au 29 octobre 2026 :** [index des documents](docs/README.md), [guide de démonstration](docs/guide-demonstration.md) et [exploitation et vérifications](docs/exploitation-et-verification.md). Ils couvrent les parcours actuels, dont le compte ABT, l’historique, le routage et les preuves. Les rapports datés conservent les résultats de leurs essais respectifs.
 
+**[Voir la vidéo de démonstration](docs/videos/README.md)** — 3 min 04, format 16:9 Full HD, voix off française et sous-titres. Le montage montre l’interface réelle, les échanges entre agents et les opérations simulées.
+
 Comptes rendus des essais : [validation du socle](docs/validation-2026-10-24.md), [tests OpenAI et Ollama](docs/tests-ia-locale-et-acces-2026-10-24.md), puis [paiement Bridge complet](docs/test-paiement-bridge-2026-10-24.md).
 
 La coopération avec les partenaires vélo et parking est implémentée : **agent MaaS → A2A → agent partenaire sur un runtime séparé → MCP → service simulé avec état**. Les actions sont confirmées dans l'IHM, liées à une autorisation temporaire et exécutées avec reprise Temporal. Voir [le fonctionnement et les essais partenaires](docs/partenaires-a2a-2026-10-24.md).

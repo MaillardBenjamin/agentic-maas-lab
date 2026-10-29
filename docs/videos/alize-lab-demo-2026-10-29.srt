@@ -1,0 +1,139 @@
+1
+00:00:00,050 --> 00:00:08,354
+Alizé Lab réunit les parcours du voyageur, de la borne et du conseiller.
+Ce prototype de billettique utilise des données fictives, des paiements
+
+2
+00:00:08,354 --> 00:00:10,892
+de démonstration et des équipements simulés.
+
+3
+00:00:11,650 --> 00:00:20,265
+Le voyageur choisit son profil de démonstration. Il retrouve le
+transport, le parking et le vélo dans un même espace, puis compose son
+
+4
+00:00:20,265 --> 00:00:20,715
+panier.
+
+5
+00:00:21,490 --> 00:00:29,935
+Le tarif est recalculé selon le profil et la date. Pour Léa, le
+transport étudiant revient à sept euros. Avec le parking, le montant à
+
+6
+00:00:29,935 --> 00:00:33,968
+payer est de douze euros. Le voyageur confirme le récapitulatif.
+
+7
+00:00:34,730 --> 00:00:43,224
+La commande est enregistrée. Le paiement constitue une étape séparée.
+Pour cette démonstration, nous utilisons la simulation locale, sans
+
+8
+00:00:43,224 --> 00:00:44,155
+débit bancaire.
+
+9
+00:00:44,930 --> 00:00:53,114
+Après confirmation du paiement, Temporal pilote la délivrance. Le
+service Keyple charge la carte simulée et la relit. L’écran confirme
+
+10
+00:00:53,114 --> 00:00:55,435
+alors que les titres sont disponibles.
+
+11
+00:00:56,210 --> 00:01:04,458
+Le compte mobilité rassemble aussi les droits conservés côté serveur.
+Deux offres transport sont proposées : un abonnement annuel à six cents
+
+12
+00:01:04,458 --> 00:01:09,547
+euros, ou un post-paiement à deux euros par trajet, plafonné à soixante
+euros par mois.
+
+13
+00:01:10,330 --> 00:01:17,791
+Le compte affiche les achats rattachés, la validité du droit et les
+échéances. Ici, l’abonnement annuel comporte douze mensualités de
+
+14
+00:01:17,791 --> 00:01:23,400
+cinquante euros. Les prélèvements sont simulés et restent distincts d’un
+encaissement bancaire réel.
+
+15
+00:01:24,170 --> 00:01:32,352
+Dans Aide, le voyageur pose sa question. Nous demandons le tarif du
+parking. Le système sélectionne le coordinateur et l’organisation
+
+16
+00:01:32,352 --> 00:01:34,444
+compétente avant de les consulter.
+
+17
+00:01:35,210 --> 00:01:43,622
+Le panneau Échanges en direct expose les appels réellement observés.
+L’accueil délègue au coordinateur Tarifs, qui consulte l’agent Parking.
+
+18
+00:01:43,622 --> 00:01:48,489
+Celui-ci appelle son outil métier. Cette séquence utilise le modèle
+local Ollama.
+
+19
+00:01:49,250 --> 00:01:57,038
+La réponse revient dans l’assistant avec ses références. Les agents
+expliquent et coordonnent. Les services métier restent responsables des
+
+20
+00:01:57,038 --> 00:01:59,615
+prix, des droits et des opérations confirmées.
+
+21
+00:02:00,370 --> 00:02:08,713
+Le poste Agence et service après-vente permet de rechercher un voyageur,
+retrouver ses commandes et accompagner une vente. Le conseiller agit sur
+
+22
+00:02:08,713 --> 00:02:12,395
+le bénéficiaire sélectionné, dans le cadre de ses habilitations.
+
+23
+00:02:13,170 --> 00:02:20,810
+Le contexte centre de relation client donne accès au suivi de la
+demande, aux dossiers de contact et aux notes. Le conseiller dispose
+
+24
+00:02:20,810 --> 00:02:25,578
+ainsi d’un poste de relation client, au-delà d’un simple assistant
+conversationnel.
+
+25
+00:02:26,330 --> 00:02:35,375
+La borne conserve son propre parcours : présenter une carte fictive,
+choisir ses produits, payer dans l’environnement de test, puis attendre
+
+26
+00:02:35,375 --> 00:02:38,088
+la délivrance avant de récupérer sa carte.
+
+27
+00:02:38,850 --> 00:02:47,041
+La capture vidéo utilise uniquement la webcam. La reconnaissance
+audiovisuelle est locale et son texte doit être relu. OpenAI peut aider
+
+28
+00:02:47,041 --> 00:02:52,280
+pour le dialogue audio, après activation explicite ; aucune image ne lui
+est transmise.
+
+29
+00:02:53,050 --> 00:03:00,367
+Alizé Lab relie les interfaces, la coopération entre agents et les
+traitements métier. Les guides et rapports de tests du dépôt précisent
+
+30
+00:03:00,367 --> 00:03:03,090
+les fonctions vérifiées et les limites à qualifier.
