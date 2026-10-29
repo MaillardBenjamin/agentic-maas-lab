@@ -24,6 +24,17 @@ contract ProofRegistryTest {
         (bool ok,) = address(r).call(abi.encodeCall(r.anchor,(bytes32(uint256(1)), bytes32(uint256(3)), 1)));
         require(!ok);
     }
+    function testConflictingSchemaRejected() public {
+        ProofRegistry r = new ProofRegistry();
+        r.anchor(bytes32(uint256(1)), bytes32(uint256(2)), 1);
+        (bool ok,) = address(r).call(abi.encodeCall(r.anchor,(bytes32(uint256(1)), bytes32(uint256(2)), 2)));
+        require(!ok);
+    }
+    function testEmptyDigestRejected() public {
+        ProofRegistry r = new ProofRegistry();
+        (bool ok,) = address(r).call(abi.encodeCall(r.anchor,(bytes32(uint256(1)), bytes32(0), 1)));
+        require(!ok);
+    }
     function testUnauthorizedRejected() public {
         ProofRegistry r = new ProofRegistry();
         OtherPublisher other = new OtherPublisher();

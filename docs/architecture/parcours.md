@@ -8,6 +8,8 @@ Les diagrammes décrivent des parcours simplifiés du code actuel. Les variantes
 
 Le voyageur demande « Peux-tu me donner le tarif du parking ? ». L’accueil transmet sa question au coordinateur Tarifs, qui consulte l’agent de l’organisation Parking via A2A. Cette consultation ne nécessite ni achat ni confirmation d’une réservation.
 
+L’API qualifie d’abord l’intention et le service dans un plan signé. Le runtime vérifie les compétences déclarées et le périmètre avant les appels. Une commission limitée au Parking sollicite uniquement Commissions puis Parking, même si la commande contient aussi Transport et Vélo. Une demande ambiguë appelle une précision. L’historique d’achats suit un autre parcours : Accueil → Achats → outil de consultation du voyageur autorisé, sans fournisseur. Voir [les contrôles et essais](../routage-achats-preuves-2026-10-29.md).
+
 ```mermaid
 sequenceDiagram
     actor V as Voyageur
@@ -31,6 +33,8 @@ sequenceDiagram
 Pour une offre combinée, le coordinateur consulte chaque organisation concernée. `prepare_offer` consulte les fournisseurs puis appelle le moteur déterministe pour préparer un devis à une date explicite. Le contexte signé fixe le voyageur et le vendeur ; les produits et la date restent examinables dans l’écran Voyageur ou Agence. Le bouton « Examiner la proposition » ouvre cet écran, où le consentement doit encore être donné. Aucun achat ni réservation n’est exécuté par cette préparation.
 
 Le SAV utilise les mêmes délégations de lecture pour consulter uniquement les lignes, réservations et usages de chaque fournisseur dans la commande sélectionnée. Le coordinateur Commissions consulte les contrats et parts de chaque fournisseur ; le relevé global reste calculé par les services métier. Une indisponibilité fournisseur n’autorise pas à présenter une réponse inventée comme confirmée.
+
+Les consultations indépendantes des fournisseurs sont lancées en parallèle, avec au plus trois appels A2A fournisseurs en cours par consultation. La lecture du relevé global pour Commissions, ou des règles MaaS pour le SAV, démarre également sans attendre les retours fournisseurs. La synthèse attend tous les résultats ; un échec fait échouer la consultation complète. La préparation du devis et les étapes d’exécution qui dépendent de résultats précédents conservent leur ordre. Voir [la validation du parallélisme](../consultations-paralleles-2026-10-29.md).
 
 ## 2. Un paiement QR sur la borne : attendre une preuve bancaire
 
@@ -124,3 +128,29 @@ Les événements acceptés sont conservés dans PostgreSQL. Une demande d’ancr
 Le manifeste reste hors chaîne. La console montre l’empreinte, le bloc, le réseau local et l’instance de déploiement ; la date du bloc est affichée en heure de Paris lorsqu’elle est disponible. Une comparaison ultérieure permet de détecter un manifeste modifié. Les contrôles métier vérifient les conditions d’acceptation ; l’ancrage permet de vérifier l’intégrité du lot conservé.
 
 Une panne d’Anvil ne doit pas empêcher le traitement des validations : le workflow d’ancrage peut être repris séparément.
+
+## 5. Un titre ABT : conserver le droit dans le compte
+
+Le voyageur choisit une offre annuelle mensualisée ou un post-paiement plafonné, puis confirme les conditions et le prélèvement simulé. L’API lie le compte au bénéficiaire autorisé et conserve le contrat et les échéances dans une transaction. Aucun titre ABT n’est chargé par Keyple.
+
+```mermaid
+sequenceDiagram
+    actor V as Voyageur
+    participant UI as Compte mobilité
+    participant API as Services métier ABT
+    participant DB as PostgreSQL
+    participant W as Worker
+    V->>UI: Offre, date et consentement
+    UI->>API: Souscription avec clé d’idempotence
+    API->>DB: Compte, contrat et échéancier atomiques
+    API-->>UI: Droit et échéances
+    V->>UI: Simuler un trajet
+    UI->>API: Identité du passage et horodatage
+    API->>DB: Vérifier le droit, dédupliquer et plafonner
+    W->>API: Traitement périodique de facturation
+    API->>DB: Échéances exigibles et prélèvements simulés
+    UI->>API: Actualiser le compte
+    API-->>UI: Usages, factures et état du droit
+```
+
+Un impayé suspend le droit ; une régularisation simulée peut le réactiver si aucun autre impayé ne subsiste et si la validité le permet. Le journal ABT reste hors chaîne. Les achats classiques rattachés au même compte conservent leur support carte et leur propre cycle de preuves. Voir [les règles ABT](../abt-transport-2026-10-29.md) et [l’audit des tests](../audit-tests-abt-2026-10-29.md).

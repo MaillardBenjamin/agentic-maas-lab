@@ -1,6 +1,23 @@
 import { useState } from "react";
 import type { AIProvider } from "./DemoScope";
 import { VideoSpeech } from "./VideoSpeech";
+import { parseAgentMarkdown, type AgentSpan } from "./agent-markdown";
+function renderSpans(spans: AgentSpan[]) {
+  return spans.map((span, index) =>
+    span.type === "bold" ? (
+      <strong key={index}>{span.value}</strong>
+    ) : span.type === "code" ? (
+      <code key={index}>{span.value}</code>
+    ) : span.type === "link" ? (
+      <a key={index} href={span.href} target="_blank" rel="noreferrer">
+        {span.value}
+      </a>
+    ) : (
+      <span key={index}>{span.value}</span>
+    ),
+  );
+}
+
 type API = (
   path: string,
   method?: string,
@@ -92,8 +109,18 @@ export function Assistant({
       <VideoSpeech api={api} onText={value => setMessage(value)} onAsk={consult} />
       {answer && (
         <article className="agent-answer">
-          {!customer && !advisor && <small>{answerInfo?.mode === "ollama_local" ? "Réponse locale Ollama" : "Réponse OpenAI"} via Agno · {answerInfo?.model}</small>}
-          <p style={{ whiteSpace: "pre-wrap" }}>{answer}</p>
+          {!customer && !advisor && <small>{answerInfo?.mode === "clarification_required" ? "Précision nécessaire · aucun appel IA" : `${answerInfo?.mode === "ollama_local" ? "Réponse locale Ollama" : "Réponse OpenAI"} via Agno · ${answerInfo?.model || ""}`}</small>}
+          <div className="agent-markdown">
+            {parseAgentMarkdown(answer).map((block, index) =>
+              block.type === "gap" ? (
+                <div key={index} className="agent-gap" />
+              ) : block.type === "heading" ? (
+                <h3 key={index}>{renderSpans(block.spans)}</h3>
+              ) : (
+                <p key={index}>{renderSpans(block.spans)}</p>
+              ),
+            )}
+          </div>
           {answerInfo?.proposal && onProposal && <button type="button" onClick={() => onProposal(answerInfo.proposal)}>Examiner la proposition · {(answerInfo.proposal.total_cents / 100).toLocaleString("fr-FR", {style: "currency", currency: "EUR"})}</button>}
           {!customer && !advisor && answerInfo?.evidence?.mcp_tools?.length > 0 && <small>Outils MCP exécutés : {answerInfo.evidence.mcp_tools.join(", ")}{answerInfo.evidence.a2a_agents.length > 0 ? " · Délégation A2A : " + answerInfo.evidence.a2a_agents.join(", ") : ""}</small>}
         </article>

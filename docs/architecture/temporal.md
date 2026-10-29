@@ -71,3 +71,7 @@ La surveillance bancaire de la borne est bornée à 15 minutes ; le lien expire 
 Ces bénéfices ont un coût : service et base supplémentaires, code de workflow soumis à des contraintes, délais à configurer et effets externes à rendre idempotents. La répartition des responsabilités reste claire : les agents accompagnent, les services calculent et exécutent, OPA contrôle les habilitations et Temporal coordonne les étapes.
 
 Les quatre workflows actuels et leur rôle sont recensés dans [les composants](composants.md). Le code de référence est [le worker du POC](../../services/worker/main.py).
+
+## Facturation ABT et distribution des preuves
+
+Le worker exécute aussi une boucle de service toutes les cinq secondes, distincte de ces workflows. Elle demande à l’API de traiter la facturation ABT et de distribuer les preuves métier en attente. Les contrats, échéances et résultats de prélèvement simulé sont persistés dans PostgreSQL et repris par des traitements idempotents ; ce n’est pas un workflow Temporal d’abonnement. La distribution des preuves démarre, elle, les workflows `ProofAnchoring` correspondant aux enregistrements déjà validés. Voir [le parcours ABT](../abt-transport-2026-10-29.md) et [les preuves de cycle de vie](../routage-achats-preuves-2026-10-29.md).

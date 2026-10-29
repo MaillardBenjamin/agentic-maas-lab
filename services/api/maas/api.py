@@ -36,6 +36,8 @@ def get(db, rid, kind=None, lock=False):
 def log(db, action, payload):
     rid = str(uuid.uuid4())
     db.add(Record(id=rid, kind="audit", data={"id": rid, "at": utc(), "action": action, "org": "alize", **payload}))
+    from maas.purchase_proofs import record_lifecycle
+    record_lifecycle(db, action, payload)
 
 
 @asynccontextmanager
@@ -187,7 +189,9 @@ async def purchase(body: Purchase, user=Depends(principal)):
                         payment_payload({"id": oid, "quote": q})
                     except ValueError as exc:
                         raise HTTPException(503, str(exc))
-                result = {"id": oid, "org": q["org"], "traveler": q["traveler"], "quote": q, "channel": body.channel, "request_digest": fingerprint, "state": "payment_pending", "payment_mode": body.payment_mode, "payment_count": 0, "refund_cents": 0, "created_at": utc(), "pause_before_issue": body.pause_before_issue}
+                from maas.abt import ensure_account
+                account_id = ensure_account(db, q["org"], q["traveler"])
+                result = {"account_id": account_id, "id": oid, "org": q["org"], "traveler": q["traveler"], "quote": q, "channel": body.channel, "request_digest": fingerprint, "state": "payment_pending", "payment_mode": body.payment_mode, "payment_count": 0, "refund_cents": 0, "created_at": utc(), "pause_before_issue": body.pause_before_issue}
                 db.add(Record(id=oid, kind="order", data=result))
                 log(db, "order.confirmed", {"order_id": oid, "principal": user["id"], "channel": body.channel})
     except IntegrityError:
@@ -431,8 +435,14 @@ def anchor(bid: str):
         rec = get(db, bid, "proof", lock=True)
         if rec.data["status"] == "anchored":
             return rec.data
-        result = anchor_batch(bid, rec.data["digest"])
-        rec.data = {**rec.data, "status": "anchored", "chain": result}
+        if rec.data.get("stage"):
+            from maas.purchase_proofs import check_source
+            if not check_source(db, rec.data, get(db, rec.data["order_id"], "order").data):
+                raise HTTPException(409, "Source de preuve modifiée")
+        from maas.proofs import sign_manifest
+        signed = sign_manifest(rec.data["manifest"])
+        result = anchor_batch(bid, rec.data["digest"], rec.data["manifest"]["schema_version"])
+        rec.data = {**rec.data, **signed, "status": "anchored", "chain": result}
         log(db, "proof.anchored", {"batch_id": bid, "block": result["block"]})
         return rec.data
 
@@ -458,3 +468,9 @@ register_live_audio(app)
 
 from maas.providers import register as register_providers
 register_providers(app, get, statement)
+
+from maas.history import register as register_history
+register_history(app, get, temporal)
+
+from maas.abt import register as register_abt
+register_abt(app)

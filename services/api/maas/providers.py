@@ -38,7 +38,7 @@ def register(app, get, statement):
                 raise ValueError()
         except (jwt.PyJWTError, KeyError, ValueError):
             raise HTTPException(403, "Délégation de consultation limitée à cette organisation requise")
-        result = {"provider": provider, "provider_org": org["org"], "organization": org["name"], "version": CATALOG["version"], "currency": CATALOG["currency"], "products": [p for p in CATALOG["products"] if p["provider"] == provider], "distribution_contracts": [c for c in CATALOG["distribution_contracts"] if c["provider"] == provider and c["distributor_org"] == user["org"]], "simulation": True, "access": "read"}
+        result = {"provider": provider, "provider_org": org["org"], "organization": org["name"], "version": CATALOG["version"], "currency": CATALOG["currency"], "products": [p for p in CATALOG["products"] if p["provider"] == provider], "distribution_contracts": [c for c in CATALOG["distribution_contracts"] if c["provider"] == provider and c["distributor_org"] == user["org"]], "abt_products": [p for p in CATALOG.get("abt_products", []) if p["provider"] == provider], "simulation": True, "access": "read"}
         traveler = scope.get("traveler")
         if traveler:
             profile = USERS.get(traveler)

@@ -77,6 +77,12 @@
       "title": "Délégation SAV fictive",
       "text": "Un conseiller d'agence peut régulariser jusqu'à cinq euros sur une commande de son organisation. Au-delà, le superviseur doit confirmer l'opération exacte. Une demande répétée ne produit pas un deuxième remboursement.",
       "provider": "maas"
+    },
+    {
+      "id": "abt-1",
+      "title": "Transport ABT · tarifs de démonstration",
+      "text": "Compte mobilité : abonnement annuel de 600 euros en douze mensualités de 50 euros, sans renouvellement automatique. Post-paiement : 2 euros par trajet accepté, plafond mensuel de 60 euros. Titres alternatifs pour une même période. Autorisation de prélèvement simulée, aucun débit bancaire. Droit conservé sur le compte, sans chargement de titre sur carte.",
+      "provider": "transport"
     }
   ],
   "organizations": [
@@ -91,7 +97,13 @@
       "distributors": [
         "alize"
       ],
-      "graph": "transport_demo"
+      "graph": "transport_demo",
+      "capabilities": [
+        "tariff",
+        "offer",
+        "sav",
+        "clearing"
+      ]
     },
     {
       "id": "parking",
@@ -104,7 +116,14 @@
       "distributors": [
         "alize"
       ],
-      "graph": "parking_demo"
+      "graph": "parking_demo",
+      "capabilities": [
+        "tariff",
+        "offer",
+        "sav",
+        "clearing",
+        "availability"
+      ]
     },
     {
       "id": "bike",
@@ -117,7 +136,14 @@
       "distributors": [
         "alize"
       ],
-      "graph": "mobilites_demo"
+      "graph": "mobilites_demo",
+      "capabilities": [
+        "tariff",
+        "offer",
+        "sav",
+        "clearing",
+        "availability"
+      ]
     }
   ],
   "distribution_contracts": [
@@ -180,6 +206,29 @@
       "seller": "app",
       "commission_bps": 200,
       "refund_allocation": "line_or_prorata"
+    }
+  ],
+  "abt_products": [
+    {
+      "id": "transport_annual",
+      "name": "Transport · abonnement annuel ABT",
+      "provider": "transport",
+      "provider_org": "transport-alize",
+      "source": "abt-1",
+      "billing": "annual_monthly",
+      "annual_cents": 60000,
+      "installments": 12,
+      "monthly_cents": 5000
+    },
+    {
+      "id": "transport_postpaid",
+      "name": "Transport · post-paiement ABT",
+      "provider": "transport",
+      "provider_org": "transport-alize",
+      "source": "abt-1",
+      "billing": "postpaid",
+      "ride_cents": 200,
+      "monthly_cap_cents": 6000
     }
   ]
 }

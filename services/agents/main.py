@@ -1,9 +1,11 @@
 """Agno runtime. No transaction tools: financial consent stays in the business API."""
+import asyncio
 import contextvars
 import json
 import os
 import re
 import uuid
+from typing import Literal
 
 import httpx
 import jwt
@@ -19,6 +21,7 @@ from fastmcp.client.transports import StreamableHttpTransport
 from ai_policy import chat_backend, ollama_target
 from partner_grants import read_grant
 from organizations import CATALOG, organization, supplier, provider_scope, read_scope
+from routing_policy import resolve_plan, validate_selection
 import activity
 
 delegated_token = contextvars.ContextVar("delegated_token", default="")
@@ -33,6 +36,7 @@ coordination = contextvars.ContextVar("coordination", default=None)
 coordination_token = contextvars.ContextVar("coordination_token", default="")
 provider_read = contextvars.ContextVar("provider_read", default="")
 current_agent = contextvars.ContextVar("current_agent", default="")
+ProviderId = Literal[tuple(o["id"] for o in CATALOG["organizations"])]
 
 
 class FixtureModel(OpenAIResponses):
@@ -47,7 +51,15 @@ class FixtureModel(OpenAIResponses):
         from unicodedata import normalize
         plain = normalize("NFKD", question.lower()).encode("ascii", "ignore").decode()
         providers = [o["id"] for o in CATALOG["organizations"] if any(word in plain for word in {"transport": ["transport", "etudiant"], "parking": ["parking", "stationnement"], "bike": ["velo", "bike"]}.get(o["id"], [o["id"]]))]
-        if "delegate_bike" in names and not tool_results:
+        if "delegate_request" in names and not tool_results:
+            name = "delegate_request"
+        elif "verify_purchase_proofs" in names and not tool_results and (coordination.get() or {}).get("plan", {}).get("intent") == "verification" and (coordination.get() or {}).get("order_id"):
+            name, arguments = "verify_purchase_proofs", {"order_id": coordination.get()["order_id"]}
+        elif "read_abt_account" in names and not tool_results and (coordination.get() or {}).get("plan", {}).get("intent") == "account":
+            name = "read_abt_account"
+        elif "list_purchases" in names and not tool_results:
+            name, arguments = "list_purchases", {}
+        elif "delegate_bike" in names and not tool_results:
             name = "delegate_" + partner_scope.get()["partner"]
         elif "bike_availability" in names or "parking_availability" in names:
             prefix = "bike" if "bike_availability" in names else "parking"
@@ -78,17 +90,22 @@ class ConsultationGuard:
 
     Ollama's adapter does not enforce tool_choice. If its first answer omits a
     consultation, perform the read-only preflight through Agno's normal tool
-    execution loop. Supplier selection defaults to the selected order scope.
+    execution loop. Supplier selection is restricted by the validated request plan.
     """
     async def ainvoke(self, *args, **kwargs):
         response = await super().ainvoke(*args, **kwargs)
         messages = kwargs.get("messages", args[0] if args else [])
         names = {t.get("function", {}).get("name") for t in kwargs.get("tools", []) or []}
+        context = coordination.get() or {}
+        if not response.tool_calls and "verify_purchase_proofs" in names and context.get("plan", {}).get("intent") == "verification" and context.get("order_id") and not any(e.get("tool") == "verify_purchase_proofs" for e in call_trace.get() or []):
+            return ModelResponse(role="assistant", tool_calls=[{"id": str(uuid.uuid4()), "type": "function", "function": {"name": "verify_purchase_proofs", "arguments": json.dumps({"order_id": context["order_id"]})}}])
+        if not response.tool_calls and "read_abt_account" in names and context.get("plan", {}).get("intent") == "account" and not any(e.get("tool") == "read_abt_account" for e in call_trace.get() or []):
+            return ModelResponse(role="assistant", tool_calls=[{"id": str(uuid.uuid4()), "type": "function", "function": {"name": "read_abt_account", "arguments": "{}"}}])
         if not response.tool_calls and not any(m.role == "tool" for m in messages):
-            name = "read_provider_context" if "read_provider_context" in names else "consult_organizations" if "consult_organizations" in names else None
+            name = next((n for n in ("delegate_request", "list_purchases", "read_provider_context", "consult_organizations") if n in names), None)
             if name:
                 question = next((str(m.content) for m in reversed(messages) if m.role == "user"), "Consulter les offres publiées")
-                arguments = {"question": question, **({"providers": []} if name == "consult_organizations" else {})}
+                arguments = {} if name in ("delegate_request", "list_purchases") else {"question": question, **({"providers": []} if name == "consult_organizations" else {})}
                 return ModelResponse(role="assistant", tool_calls=[{"id": str(uuid.uuid4()), "type": "function", "function": {"name": name, "arguments": json.dumps(arguments)}}])
         return response
 
@@ -136,9 +153,32 @@ async def read_catalog() -> str:
     return await mcp_call("read_catalog", {})
 
 
+async def read_abt_account() -> str:
+    """Read the selected traveler’s ABT entitlements, installments and usage billing."""
+    return await mcp_call("read_abt_account", {})
+
+
 async def read_order(order_id: str) -> str:
     """Read an order within the authenticated caller's scope."""
-    return await mcp_call("read_order", {"order_id": order_id})
+    return await mcp_call("read_purchase", {"order_id": order_id})
+
+
+async def list_purchases(traveler_id: str | None = None, limit: int = 5, offset: int = 0) -> str:
+    """Find purchases for the authenticated or selected traveler. Published demo ids: lea, adult. Paginated, read only."""
+    return await mcp_call("list_purchases", {"traveler_id": traveler_id, "limit": limit, "offset": offset})
+
+
+async def verify_purchase_proofs(order_id: str) -> str:
+    """Verify source integrity, signature and the current blockchain record for an authorized purchase."""
+    return await mcp_call("verify_purchase_proofs", {"order_id": order_id})
+
+
+async def delegate_request() -> str:
+    """Delegate only to the coordinator approved by the validated request plan."""
+    plan = (coordination.get() or {}).get("plan", {})
+    if plan.get("clarification") or not plan.get("target"):
+        raise ValueError("Demande à préciser")
+    return await delegate_read(plan["target"], plan["question"])
 
 
 async def read_statement(order_id: str) -> str:
@@ -162,6 +202,10 @@ async def delegate_read(aid, question, provider=False):
 
 
 async def _delegate_read(aid, question, provider=False):
+    plan = (coordination.get() or {}).get("plan", {})
+    if plan.get("clarification") or (not provider and aid != plan.get("target")) or (provider and aid not in plan.get("providers", [])):
+        raise ValueError("Délégation incompatible avec les compétences et services de la demande")
+    question = plan.get("question", question)
     headers = {"Authorization": "Bearer " + delegated_token.get(), "X-MaaS-Coordination": coordination_token.get(), **activity.trace_headers()}
     if provider:
         context = coordination.get() or {}
@@ -204,8 +248,8 @@ async def delegate_mobility(question: str) -> str:
     return await delegate_read("mobility", question)
 
 
-async def consult_organizations(question: str, providers: list[str]) -> str:
-    """Consult supplier agents via A2A: transport, parking, bike. Empty list selects order suppliers, otherwise all."""
+async def consult_organizations(question: str, providers: list[ProviderId]) -> str:
+    """Consult only the suppliers approved by the request plan. An empty list uses that validated selection; unrelated suppliers are rejected."""
     try:
         return await _consult_organizations(question, providers)
     except Exception:
@@ -215,21 +259,37 @@ async def consult_organizations(question: str, providers: list[str]) -> str:
 
 async def _consult_organizations(question, providers):
     context = coordination.get() or {}
-    selected = list(dict.fromkeys(providers or context.get("providers") or [o["id"] for o in CATALOG["organizations"] if caller.get()["org"] in o["distributors"]]))
+    selected = validate_selection(context.get("plan", {}), current_agent.get(), providers, caller.get()["org"])
     if current_agent.get() in ("sav", "clearing") and context.get("order_id"):
         if any(p not in context.get("providers", []) for p in selected):
             raise ValueError("Fournisseur absent de la commande sélectionnée")
     # Validate the entire selection before making the first remote request.
     for provider in selected:
         organization(provider, caller.get()["org"])
-    results = []
-    for provider in selected:
-        results.append({"provider": provider, "answer": await delegate_read(provider, question, provider=True)})
-    result = {"organizations": results}
+    # These are independent, read-only consultations. Each task inherits the
+    # caller, signed scope and activity context, while preserving result order.
+    slots = asyncio.Semaphore(3)
+    async def consult(provider):
+        async with slots:
+            return {"provider": provider, "answer": await delegate_read(provider, question, provider=True)}
+
+    jobs = [consult(provider) for provider in selected]
+    extra = None
     if current_agent.get() == "sav":
-        result["maas_policy"] = json.loads(await search_tariffs(question))
-    if current_agent.get() == "clearing" and context.get("order_id"):
-        result["global_statement"] = json.loads(await read_statement(context["order_id"]))
+        extra = "maas_policy"
+        jobs.append(search_tariffs(question))
+    elif current_agent.get() == "clearing" and context.get("order_id"):
+        extra = "global_statement"
+        jobs.append(read_statement(context["order_id"]))
+    # Drain every consultation on failure: no partial success and no sibling
+    # request left running after the coordination context has been released.
+    responses = await asyncio.gather(*jobs, return_exceptions=True)
+    for response in responses:
+        if isinstance(response, BaseException):
+            raise response
+    result = {"organizations": responses[:len(selected)]}
+    if extra:
+        result[extra] = json.loads(responses[-1])
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -250,6 +310,10 @@ async def _prepare_offer(products, travel_date):
     if not products or len(products) != len(set(products)):
         raise ValueError("Produits vides ou répétés")
     providers = list(dict.fromkeys(supplier(p)["id"] for p in products))
+    plan = coordination.get().get("plan", {})
+    validate_selection(plan, current_agent.get(), providers, caller.get()["org"])
+    if plan.get("intent") != "offer" or set(providers) != set(plan["providers"]):
+        raise ValueError("Produits incompatibles avec l’offre demandée")
     # Preparation reads published offers without requiring an existing order.
     ctx = coordination.set({**coordination.get(), "order_id": None, "providers": providers, "travel_date": travel_date})
     try:
@@ -354,13 +418,15 @@ def make_agent(aid, name, tools):
         model = GroundedResponses(id=os.environ.get("OPENAI_MODEL", "gpt-6-luna"), max_output_tokens=700, reasoning_effort="none", store=False, timeout=45, max_retries=0)
     role_instructions = []
     if aid == "conversation":
-        role_instructions = ["Tu es l’accueil. Pour un tarif appelle delegate_tariff ; pour une panne, contestation ou incident appelle delegate_sav ; pour une commission ou répartition appelle delegate_clearing ; pour la disponibilité, une réservation ou préparer une offre appelle delegate_mobility. Délègue la question complète, sans changer les produits ni les dates. Ne réponds pas à une question métier sans délégation. Une demande de réservation prépare une proposition ; seul l’écran métier permet la confirmation."]
+        role_instructions = ["Tu es l’accueil. La demande est déjà qualifiée par un plan contrôlé. Appelle obligatoirement delegate_request, qui choisit le coordinateur autorisé. Restitue fidèlement sa réponse ; ne change ni le voyageur, ni le service, ni les dates."]
+    if aid == "history":
+        role_instructions = ["Tu consultes les achats du voyageur authentifié ou sélectionné. Pour le compte mobilité ABT, ses factures, mensualités ou son abonnement, utilise obligatoirement read_abt_account. Les prélèvements sont simulés ; pending et failed ne sont pas encaissés. Les droits sont conservés sur le compte, pas sur une carte. Utilise list_purchases pour rechercher sans référence, read_order pour un détail et verify_purchase_proofs pour vérifier les preuves blockchain d’une commande retrouvée. Commence par le total de commandes et le nombre affiché sur cette page. Présente ensuite une seule ligne concise par commande : référence, date courte, produits, montant et état en français. Propose la page suivante si has_more. Sans inventer les autres commandes. Ne recopie pas les objets techniques ni tous les champs. Une commande en attente de paiement n’est pas un achat payé. Ne prétends pas manquer de droits sans refus explicite du service. Si le voyageur n’est pas sélectionné, demande sa sélection ; ne consulte jamais un autre voyageur. Pour les preuves distingue verified, pending, not_available, invalid/data_mismatch, deployment_changed et chain_unavailable. Ne déduis jamais une vérification de l’état enregistré anchored : elle nécessite verify_purchase_proofs. Une preuve valide atteste le contenu enregistré, pas la réalité d’un paiement bancaire. Cite les références des commandes et preuves. Aucun agent fournisseur n’est nécessaire pour lister ces achats."]
     if aid == "tariffs":
-        role_instructions = ["Tu es le coordinateur des demandes tarifaires, chaque fournisseur maîtrise ses offres. Appelle obligatoirement consult_organizations avec la question et les fournisseurs concernés : transport, parking ou bike (vélo). Plusieurs produits : consulte tous leurs fournisseurs. Puis restitue les tarifs, conditions et identifiants de sources renvoyés ; ne calcule jamais de total personnalisé. Pour un devis à une date explicite, utilise prepare_offer ; si la date manque, demande-la."]
+        role_instructions = ["Tu es le coordinateur des demandes tarifaires, chaque fournisseur maîtrise ses offres. Appelle obligatoirement consult_organizations avec la question et les fournisseurs concernés : transport, parking ou bike (vélo). Plusieurs produits : consulte tous leurs fournisseurs. Puis restitue les tarifs, conditions et identifiants de sources renvoyés ; ne calcule jamais de total personnalisé. Pour une préparation commerciale, invite à formuler une demande de devis avec les produits et la date."]
     if aid == "sav":
-        role_instructions = ["Tu coordonnes le SAV. Appelle obligatoirement consult_organizations pour consulter les usages, réservations et montants propres aux fournisseurs concernés de la commande sélectionnée. La liste vide consulte tous les fournisseurs de cette commande. L’outil renvoie aussi les règles MaaS applicables. Après consultation, explique les faits observés et ce qui reste à vérifier. Sans commande sélectionnée, demande sa sélection pour diagnostiquer un incident individuel. N’invente pas de panne, de résolution ou d’autorisation de remboursement. Tu disposes déjà d’un accès aux organisations : utilise-le avant de proposer au voyageur de les contacter."]
+        role_instructions = ["Tu coordonnes le SAV. Appelle obligatoirement consult_organizations pour consulter les usages, réservations et montants propres aux fournisseurs concernés de la commande sélectionnée. Une liste vide reprend uniquement les fournisseurs du plan validé, sans élargissement à la commande entière. L’outil renvoie aussi les règles MaaS applicables. Après consultation, explique les faits observés et ce qui reste à vérifier. Sans commande sélectionnée, demande sa sélection pour diagnostiquer un incident individuel. N’invente pas de panne, de résolution ou d’autorisation de remboursement. Tu disposes déjà d’un accès aux organisations : utilise-le avant de proposer au voyageur de les contacter."]
     if aid == "clearing":
-        role_instructions = ["Tu coordonnes l’explication des commissions et reversements. Appelle obligatoirement consult_organizations pour consulter les contrats et parts propres aux fournisseurs de la commande ; liste vide = tous. Cet outil renvoie aussi le relevé global calculé, jamais de calcul mental. Sans commande, explique uniquement les contrats publiés et demande une commande pour expliquer un montant individuel."]
+        role_instructions = ["Tu coordonnes l’explication des commissions et reversements. Appelle obligatoirement consult_organizations pour consulter les contrats et parts des seuls fournisseurs concernés par la demande ; une liste vide reprend uniquement le plan validé. Cet outil renvoie aussi le relevé global calculé, jamais de calcul mental. Sans commande, explique uniquement les contrats publiés et demande une commande pour expliquer un montant individuel."]
     if aid == "mobility":
         role_instructions = ["Tu coordonnes la préparation commerciale. Pour connaître une offre ou disponibilité utilise consult_organizations ; transport, parking et bike représentent des organisations différentes. Pour préparer une offre à une date explicite appelle prepare_offer ; les produits autorisés sont transport, parking, bike. Demande la date si absente, ne la devine pas. Le devis est proposé pour examen dans l’interface, sans réservation ni achat. Pour un simple tarif consulte les organisations concernées."]
     if aid == "mobility_operations":
@@ -375,8 +441,9 @@ def make_agent(aid, name, tools):
 
 
 agents = [
-    make_agent("conversation", "Accueil conversationnel", [delegate_tariff, delegate_sav, delegate_clearing, delegate_mobility]),
-    make_agent("tariffs", "Coordination des tarifs", [consult_organizations, prepare_offer]),
+    make_agent("conversation", "Accueil conversationnel", [delegate_request]),
+    make_agent("history", "Consultation des achats et preuves", [list_purchases, read_order, verify_purchase_proofs, read_abt_account]),
+    make_agent("tariffs", "Coordination des tarifs", [consult_organizations]),
     make_agent("sav", "Coordination SAV", [consult_organizations]),
     make_agent("clearing", "Coordination des commissions", [consult_organizations]),
     make_agent("mobility", "Coordination commerciale MaaS", [consult_organizations, prepare_offer]),
@@ -431,6 +498,16 @@ async def authenticate(request: Request, call_next):
     try:
         if context_token:
             context = read_scope(context_token, "maas-coordination", user)
+        if RUNTIME != "partners" and aid and not needs_grant and not context.get("plan"):
+            body = await request.json()
+            question = "\n".join(p["text"] for p in body.get("params", {}).get("message", {}).get("parts", []) if p.get("kind") == "text")
+            context = {**context, "plan": resolve_plan(question, context, user["org"])}
+        if RUNTIME != "partners" and aid and not needs_grant:
+            plan = context["plan"]
+            if plan.get("clarification"):
+                return JSONResponse({"detail": plan["clarification"]}, status_code=422)
+            if aid not in ("conversation", plan.get("target")):
+                raise ValueError("Coordinateur hors compétence")
         if RUNTIME == "partners" and request.method != "GET" and not needs_grant:
             read = read_scope(read_token, "maas-provider-read", user)
             org = organization(aid, user["org"])

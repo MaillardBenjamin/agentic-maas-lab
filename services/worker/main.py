@@ -1,5 +1,6 @@
 import asyncio
 import os
+from contextlib import suppress
 from datetime import timedelta
 
 from temporalio import activity, workflow
@@ -130,6 +131,20 @@ class BankPaymentWatch:
         return {"settled": False, "reason": "watch_window_expired_manual_reconciliation_required"}
 
 
+async def dispatch_proof_outbox():
+    # The durable rows are committed with business transitions. A restart or
+    # unavailable chain never loses a pending proof or blocks a purchase.
+    async with httpx.AsyncClient(timeout=30) as client:
+        while True:
+            for path in ("/internal/proofs/dispatch", "/internal/abt/billing"):
+                try:
+                    response = await client.post(os.environ.get("API_URL", "http://api:8000") + path, headers=service_headers())
+                    response.raise_for_status()
+                except (httpx.HTTPError, ValueError):
+                    pass
+            await asyncio.sleep(5)
+
+
 async def main():
     configure("maas-worker")
     for attempt in range(40):
@@ -142,7 +157,13 @@ async def main():
             await asyncio.sleep(2)
     # The Worker inherits this dual client/worker interceptor from its Client.
     async with Worker(client, task_queue="maas-ticketing", workflows=[PurchaseAndIssue, ProofAnchoring, PartnerInteraction, BankPaymentWatch], activities=[set_order_state, issue_card, anchor_proof, delegate_partner, fail_partner, check_bank]):
-        await asyncio.Event().wait()
+        dispatcher = asyncio.create_task(dispatch_proof_outbox())
+        try:
+            await asyncio.Event().wait()
+        finally:
+            dispatcher.cancel()
+            with suppress(asyncio.CancelledError):
+                await dispatcher
 
 
 if __name__ == "__main__":

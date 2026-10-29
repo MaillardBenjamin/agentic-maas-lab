@@ -53,7 +53,7 @@ export function AgentActivity({ api }: { api: API }) {
   }, [opened]);
   const run = runs.find(value => value.id === selected) || runs.at(-1);
   const current = spans.filter(value => value.run_id === run?.id);
-  const actors = ['conversation', 'tariffs', 'sav', 'clearing', 'mobility', 'transport', 'bike', 'parking'];
+  const actors = ['conversation', 'history', 'tariffs', 'sav', 'clearing', 'mobility', 'transport', 'bike', 'parking'];
   return <div className="agent-activity">
     {!opened && <button className="activity-launch" type="button" onClick={() => setOpened(true)}><Activity size={18} /> Échanges en direct</button>}
     {opened && <section className="activity-panel" aria-label="Échanges entre agents en direct">

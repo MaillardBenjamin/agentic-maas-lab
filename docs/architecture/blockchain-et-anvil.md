@@ -18,6 +18,8 @@ Un ancrage donne une empreinte vérifiable du lot retenu. Une version modifiée 
 
 Le réseau local permet d’explorer ce mécanisme ; son extension à des partenaires indépendants passe par une gouvernance commune.
 
+Depuis le 29 octobre, les transitions d’achat, paiement, délivrance, usage et régularisation alimentent automatiquement une file de preuves transactionnelle. Le worker réalise ensuite signature et ancrage. Les agents peuvent rechercher les achats autorisés et demander une vérification actuelle des preuves ; les commandes anciennes sans preuve restent explicitement distinguées. Voir [le fonctionnement et les essais](../routage-achats-preuves-2026-10-29.md).
+
 ## Le mécanisme du POC
 
 ```mermaid

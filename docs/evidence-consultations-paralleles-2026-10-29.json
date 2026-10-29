@@ -1,0 +1,219 @@
+{
+  "status": "passed",
+  "mode": "ollama_local",
+  "model": "qwen3:14b",
+  "provider": "Ollama",
+  "all_three_started_before_first_completed": true,
+  "launch_spread_ms": 0,
+  "elapsed_seconds": 134.1,
+  "supplier_spans": {
+    "bike": {
+      "started": "2026-10-29T06:56:22.518584+00:00",
+      "completed": "2026-10-29T06:57:22.112248+00:00",
+      "duration_ms": 59601
+    },
+    "parking": {
+      "started": "2026-10-29T06:56:22.518623+00:00",
+      "completed": "2026-10-29T06:57:48.132287+00:00",
+      "duration_ms": 85627
+    },
+    "transport": {
+      "started": "2026-10-29T06:56:22.518517+00:00",
+      "completed": "2026-10-29T06:56:55.707877+00:00",
+      "duration_ms": 32786
+    }
+  },
+  "business_state_unchanged": true,
+  "evidence": {
+    "mcp_tools": [
+      "read_provider_context",
+      "read_statement"
+    ],
+    "a2a_agents": [
+      "bike",
+      "parking",
+      "transport"
+    ]
+  },
+  "events": [
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "8abdc47b6aa241d1be3d77f950f76bc4",
+      "protocol": "A2A",
+      "source": "interface",
+      "target": "clearing",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 3,
+      "at": "2026-10-29T06:56:17.347281+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "fd421a4651544c24a789bce54a94445b",
+      "protocol": "A2A",
+      "source": "clearing",
+      "target": "transport",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 4,
+      "at": "2026-10-29T06:56:22.518517+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "8f868244fced4babb1dc75c346b45c98",
+      "protocol": "A2A",
+      "source": "clearing",
+      "target": "bike",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 5,
+      "at": "2026-10-29T06:56:22.518584+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "f60dfe6765374007ac853c84e2630020",
+      "protocol": "A2A",
+      "source": "clearing",
+      "target": "parking",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 6,
+      "at": "2026-10-29T06:56:22.518623+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "0f835958b03e4b3eb2aac5caaa817aae",
+      "protocol": "MCP",
+      "source": "clearing",
+      "target": "read_statement",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 7,
+      "at": "2026-10-29T06:56:22.519043+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "0f835958b03e4b3eb2aac5caaa817aae",
+      "protocol": "MCP",
+      "source": "clearing",
+      "target": "read_statement",
+      "state": "completed",
+      "duration_ms": 130,
+      "sequence": 8,
+      "at": "2026-10-29T06:56:22.640661+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "784a9ca0de7b4d9c8bfd21bb1b4a21cb",
+      "protocol": "MCP",
+      "source": "transport",
+      "target": "read_provider_context",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 9,
+      "at": "2026-10-29T06:56:25.746791+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "784a9ca0de7b4d9c8bfd21bb1b4a21cb",
+      "protocol": "MCP",
+      "source": "transport",
+      "target": "read_provider_context",
+      "state": "completed",
+      "duration_ms": 174,
+      "sequence": 10,
+      "at": "2026-10-29T06:56:25.907575+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "55dc4f0c29d34584988b5de7c3a8f74b",
+      "protocol": "MCP",
+      "source": "bike",
+      "target": "read_provider_context",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 11,
+      "at": "2026-10-29T06:56:28.653412+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "55dc4f0c29d34584988b5de7c3a8f74b",
+      "protocol": "MCP",
+      "source": "bike",
+      "target": "read_provider_context",
+      "state": "completed",
+      "duration_ms": 123,
+      "sequence": 12,
+      "at": "2026-10-29T06:56:28.749525+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "97f6ec5e277e4cacab767b62a93f59b9",
+      "protocol": "MCP",
+      "source": "parking",
+      "target": "read_provider_context",
+      "state": "started",
+      "duration_ms": null,
+      "sequence": 13,
+      "at": "2026-10-29T06:56:31.807229+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "97f6ec5e277e4cacab767b62a93f59b9",
+      "protocol": "MCP",
+      "source": "parking",
+      "target": "read_provider_context",
+      "state": "completed",
+      "duration_ms": 91,
+      "sequence": 14,
+      "at": "2026-10-29T06:56:31.885469+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "fd421a4651544c24a789bce54a94445b",
+      "protocol": "A2A",
+      "source": "clearing",
+      "target": "transport",
+      "state": "completed",
+      "duration_ms": 32786,
+      "sequence": 15,
+      "at": "2026-10-29T06:56:55.707877+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "8f868244fced4babb1dc75c346b45c98",
+      "protocol": "A2A",
+      "source": "clearing",
+      "target": "bike",
+      "state": "completed",
+      "duration_ms": 59601,
+      "sequence": 16,
+      "at": "2026-10-29T06:57:22.112248+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "f60dfe6765374007ac853c84e2630020",
+      "protocol": "A2A",
+      "source": "clearing",
+      "target": "parking",
+      "state": "completed",
+      "duration_ms": 85627,
+      "sequence": 17,
+      "at": "2026-10-29T06:57:48.132287+00:00"
+    },
+    {
+      "run_id": "e0deea2f9ac14979a61c1430b5f9a92f",
+      "span_id": "8abdc47b6aa241d1be3d77f950f76bc4",
+      "protocol": "A2A",
+      "source": "interface",
+      "target": "clearing",
+      "state": "completed",
+      "duration_ms": 133883,
+      "sequence": 18,
+      "at": "2026-10-29T06:58:31.223144+00:00"
+    }
+  ],
+  "answer": "### Répartition des commissions et des montants par fournisseur pour votre commande\n\n#### **1. Transport**\n- **Produit** : Transport · réseau Alizé  \n- **Prix initial** : `10,00 €` (source : `tariff-1`)  \n- **Réduction étudiant vérifié** : `30,00 %` (soit `3,00 €` de réduction)  \n- **Prix final après réduction** : `7,00 €`  \n- **Commission du distributeur (alize)** : `2,00 %` du prix final (`7,00 €`) → `0,14 €`  \n- **Montant net payé par le voyageur** : `7,00 €`  \n- **Montant reçu par le fournisseur (Transport Alizé)** : `6,86 €`  \n- **Contrat de distribution** : `distribution-transport-app` (version `2026-demo-v1`)  \n- **Répartition en cas de remboursement** : `line_or_prorata`  \n\n---\n\n#### **2. Vélo**\n- **Fournisseur** : `velo-partage` (organisation `Vélo partagé`)  \n- **Distributeur** : `alize`  \n- **Commission du distributeur** : `5,00 %` (pour la vente via l'agence) ou `2,00 %` (pour la vente via l'application)  \n- **Montant total de la commande** : `3,00 €`  \n- **Commission du distributeur** : `0,15 €` (calculée à `5,00 %` du montant total)  \n- **Montant restant pour le fournisseur** : `2,85 €`  \n- **Source de l'offre** : `bike-1` (détail de l'offre : \"Un euro de déverrouillage puis vingt centimes par minute commencée, avec un plafond de cinq euros. La facturation intervient après restitution confirmée.\")  \n- **Contrat de distribution** : `distribution-bike-agency` (version `2026-demo-v1`)  \n\n---\n\n#### **3. Parking**\n- **Produit** : Parking relais  \n- **Prix initial** : `5,00 €`  \n- **Prix validé** : `3,00 €`  \n- **Fournisseur** : `parking-relais`  \n- **Source** : `parking-1`  \n- **Commission de l'agence (distribution-parking-agency)** : `5,00 %` → `0,25 €`  \n- **Commission de l'application (distribution-parking-app)** : `2,00 %` → `0,10 €`  \n- **Montant prépayé** : `5,00 €`  \n- **Montant opérateur (parking-relais)** : `4,75 €`  \n- **Contrats pertinents** :  \n  - **Source** : `parking-1`  \n  - **Contrat de distribution** : `distribution",
+  "runtime_tests_passed": 12,
+  "fixture_cooperation_cases_passed": 5
+}

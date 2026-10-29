@@ -18,7 +18,8 @@ def login(uid):
 
 def call(path, headers, body=None, status=200):
     r = httpx.request("POST" if body is not None else "GET", BASE + path, headers=headers, json=body, timeout=15)
-    assert r.status_code == status, (path, r.status_code, r.text)
+    diagnostic = "Réponse audio masquée" if path.startswith("/api/voice/session") else r.text
+    assert r.status_code == status, (path, r.status_code, diagnostic)
     return r.json()
 
 
@@ -38,6 +39,7 @@ def run():
     payload = {"quote_id": q["id"], "idempotency_key": "smoke-" + uuid.uuid4().hex, "pause_before_issue": True}
     order = call("/api/orders", lea, payload)
     oid = order["id"]
+    assert order["account_id"] == "abt-account-alize-lea"
     assert call("/api/orders", lea, payload)["id"] == oid
     call("/api/demo/orders/" + oid + "/pay", lea, {})
     call("/api/demo/orders/" + oid + "/pay", lea, {})
@@ -66,8 +68,8 @@ def run():
     assert (s["refund_cents"], s["seller_commission_cents"], s["operators_cents"], s["bike_due_cents"], s["events_count"]) == (200, 50, 950, 300, 2)
     call("/api/orders/" + oid, login("adult"), status=403)
     call("/api/orders/" + oid + "/refunds", lea, refund, 403)
-    found = call("/api/knowledge/search", lea, {"query": "étudiant"})
-    assert any(x["id"] == "tariff-1" for x in found["sources"])
+    found = call("/api/knowledge/search", lea, {"query": "contrats distribution"})
+    assert any(x["id"] == "distribution-1" for x in found["sources"])
     print(json.dumps({"status": "passed", "order_id": oid, "checks": ["tarif étudiant", "commande idempotente", "paiement répété", "reprise Temporal", "émission unique", "doublon inter-fabricants", "facturation vélo", "refus OPA", "remboursements concurrents", "isolation voyageur", "sources FalkorDB"], "statement": s}, ensure_ascii=False, indent=2))
 
 

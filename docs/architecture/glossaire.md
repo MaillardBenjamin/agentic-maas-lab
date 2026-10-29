@@ -6,6 +6,9 @@
 |---|---|
 | **MaaS** | *Mobility as a Service* : réunir plusieurs mobilités dans un même parcours. Le POC se concentre sur la billettique. |
 | **Billettique** | Ensemble des fonctions d’offre, vente, délivrance, utilisation et contrôle des titres et droits d’accès. |
+| **ABT** | *Account-Based Ticketing* : le droit de voyager est conservé dans un compte côté serveur. Les nouvelles offres ABT du projet n’exigent pas de chargement de titre Keyple ; leurs valideurs et prélèvements sont simulés. |
+| **CRC** | Centre de relation client. Le poste Agence & SAV propose un contexte CRC pour rechercher un voyageur, consulter ses dossiers et accompagner une demande. |
+| **Plafonnement** | Limite appliquée par le moteur de facturation à une période donnée. Le post-paiement ABT est ici plafonné à 60 € par mois civil UTC. |
 | **DSP** | Délégation de service public. Dans les plans du projet, désigne les acteurs et contrats d’exploitation concernés ; il représente ici le contexte contractuel d’exploitation. |
 | **Agent IA** | Logiciel associant un modèle, des instructions et des outils pour traiter une demande. Il s’appuie sur les services métier pour les décisions et les calculs. |
 | **LLM / modèle de langage** | Modèle qui génère ou interprète du texte et peut proposer des appels d’outils. Ollama et OpenAI permettent ici d’en utiliser selon deux modes d’hébergement. |
@@ -42,7 +45,7 @@
 | **Blockchain** | Registre de transactions organisées en blocs reliés cryptographiquement. Un réseau et sa gouvernance peuvent permettre à plusieurs acteurs de vérifier des enregistrements communs. La qualité des données est contrôlée par les services à l’entrée. |
 | **Anvil** | Logiciel qui fait fonctionner notre blockchain Ethereum locale de développement. Il permet d’explorer les transactions et l’ancrage avant une évolution vers un registre partagé. |
 | **Ancrage** | Inscription d’une empreinte sur la blockchain pour disposer d’une référence de comparaison ; le document original reste ici hors chaîne. |
-| **Smart contract** | Programme exécuté sur la blockchain. ProofRegistry conserve des empreintes ; les signatures documentaires relèvent du parcours d’abonnement. |
+| **Smart contract** | Programme exécuté sur la blockchain. ProofRegistry conserve les empreintes et versions des manifestes ; leur signature documentaire est calculée hors chaîne. Les contrats ABT et leurs factures restent dans PostgreSQL. |
 | **SHA-256 / empreinte** | Fonction produisant une empreinte à partir d’un contenu. Elle permet de comparer des versions ; la confidentialité et la qualité du contenu relèvent des services associés. |
 | **Ed25519 / signature** | Algorithme de signature à clé privée, vérifiable avec la clé publique. Ici, il signe les manifestes du POC ; la signature relie le manifeste à la clé utilisée. |
 | **OpenTelemetry / trace / Jaeger** | OpenTelemetry instrumente et transmet les traces ; une trace relie des étapes d’un traitement ; Jaeger permet de les consulter. L’instrumentation actuelle couvre l’API et les workflows/activités Temporal. |

@@ -15,13 +15,16 @@ Les noms entre parenthèses correspondent aux services de [Docker Compose](../..
 
 Sources principales : [API](../../services/api/maas/api.py), [règles tarifaires](../../services/api/maas/domain.py), [politiques SAV](../../policies/maas.rego).
 
+Le module [ABT](../../services/api/maas/abt.py) conserve les comptes, contrats, usages et factures simulées dans PostgreSQL. Les achats classiques d’un voyageur connu sont rattachés au même compte sans changement de support ; les nouveaux droits ABT sont contrôlés côté serveur, sans chargement Keyple. Le worker appelle périodiquement la facturation et le rattrapage idempotent. Ce traitement n’est pas un workflow Temporal d’abonnement. Voir [les règles du compte mobilité](../abt-transport-2026-10-29.md).
+
 ## Agents, modèles et outils
 
 **Agno** construit les agents et les relie aux modèles et outils. **AgentOS** les expose comme services, notamment via A2A. Le planificateur AgentOS est désactivé : les opérations durables relèvent de Temporal.
 
 | Agent | Rôle dans le POC |
 |---|---|
-| Accueil conversationnel | Délègue selon l’intention à Tarifs, SAV, Commissions ou MaaS. |
+| Accueil conversationnel | Délègue au coordinateur autorisé par le plan signé : Tarifs, SAV, Commissions, MaaS ou Achats. |
+| Achats et preuves | Recherche les commandes du voyageur autorisé et vérifie les preuves avec les services métier et la chaîne active. |
 | Coordination Tarifs | Consulte via A2A les organisations concernées ; rassemble les tarifs sourcés. |
 | Coordination SAV | Consulte le périmètre du dossier propre à chaque fournisseur et prépare la réponse du conseiller. |
 | Coordination Commissions | Consulte les contrats et parts des fournisseurs ; explique le relevé déterministe. |
@@ -30,6 +33,10 @@ Sources principales : [API](../../services/api/maas/api.py), [règles tarifaires
 | Exécution MaaS et opérations Vélo/Parking | Points d’entrée distincts, accessibles uniquement avec une action confirmée et une autorisation signée. |
 
 Les coordinateurs sont exposés par `agents`, les agents d’organisation par `partners`. Les compétences sont regroupées dans deux runtimes ; leur identité et leurs droits restent distincts. Le registre publié dans `fixtures/catalog.json` relie fournisseur, organisation, produits, agent et graphe documentaire. `org` désigne le distributeur MaaS, `provider_org` le fournisseur : ces identités ne sont pas interchangeables.
+
+La sélection croise intention, services et compétences déclarées avant tout appel. Une liste vide du modèle reprend le plan validé sans élargissement. Un fournisseur hors plan ou un coordinateur incompatible est refusé. Voir [la politique et les validations](../routage-achats-preuves-2026-10-29.md).
+
+Les lectures indépendantes de plusieurs fournisseurs s’exécutent en parallèle, avec une limite de trois appels A2A fournisseurs par consultation. Les lectures de relevé ou de règles MaaS indépendantes démarrent dans le même groupe. La synthèse attend la fin de toutes les lectures ; leur ordre de présentation reste stable et aucun succès partiel n’est présenté comme complet. Les autorisations et le suivi sont transmis à chaque tâche. Les étapes métier dépendantes conservent leur ordre.
 
 Le fournisseur de modèle peut être **Ollama**, avec une inférence sur le Mac, ou **OpenAI**, via une API cloud. Les tests de protocole peuvent employer un double de modèle déterministe pour isoler les tests de protocole. Les identités et droits métier sont vérifiés par les services.
 

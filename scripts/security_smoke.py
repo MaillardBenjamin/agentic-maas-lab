@@ -23,12 +23,16 @@ cloud = any(i["name"] == "OpenAI" and i["mode"] == "configured" for i in integra
 local = any(i["name"] == "Ollama" and i["mode"] == "configured" for i in integrations)
 if not cloud and not local:
     call("/api/chat", lea, {"message": "Explique le tarif"}, 503)
-if not cloud:
-    call("/api/voice/session", lea, {}, 503)
+voice = call("/api/voice/status", lea)
+if not voice["configured"]:
+    call("/api/voice/session", lea, {"consent": True}, 503)
+else:
+    # Invalid consent is rejected before any reservation or provider request.
+    call("/api/voice/session", lea, {"consent": False}, 422)
 assert call("/api/budget", lea)["reserved_cents"] == before["reserved_cents"]
 foreign = {"Authorization": "Bearer " + token({**USERS["clerk"], "org": "other-operator"})}
 call("/api/orders/" + oid, foreign, status=403)
 call("/api/orders/" + oid + "/refunds", foreign, {"amount_cents": 100, "reason": "Accès hors organisation", "idempotency_key": "cross-org-refund"}, 403)
 call("/api/webhooks/bridge", {}, {"content": {"payment_request_id": "forged"}}, 401)
 call("/api/orders", {}, status=401)
-print({"status": "passed", "checks": ["no cloud budget debit", "cross-organization read", "cross-organization refund", "unsigned webhook", "missing JWT"], "disabled_bank_checked": not bank, "disabled_chat_checked": not cloud and not local, "disabled_voice_checked": not cloud})
+print({"status": "passed", "checks": ["no cloud budget debit", "cross-organization read", "cross-organization refund", "unsigned webhook", "missing JWT"], "disabled_bank_checked": not bank, "disabled_chat_checked": not cloud and not local, "disabled_voice_checked": not voice["configured"], "audio_consent_checked": True})

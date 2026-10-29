@@ -20,13 +20,14 @@ from maas.domain import describe_quote, digest
 from maas.security import access, principal, service
 from maas.organizations import sign_scope
 from maas.security import USERS
+from maas.routing import normalized, resolve_plan
 from temporalio.common import WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
 
 class Chat(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
-    agent: str = Field(default="conversation", pattern=r"^(conversation|tariffs|sav|clearing)$")
+    agent: str = Field(default="conversation", pattern=r"^(conversation|tariffs|sav|clearing|history)$")
     order_id: str | None = Field(default=None, max_length=80)
     traveler: str | None = Field(default=None, max_length=80)
     seller: str = Field(default="app", pattern=r"^(app|agency)$")
@@ -44,6 +45,18 @@ def register(app, get, temporal, log):
             raise HTTPException(503, "IA désactivée. Activer AI_ENABLED et choisir AGENT_MODE=ollama ou openai.")
         message = body.message
         traveler = body.traveler or (user["id"] if user["role"] == "traveler" else None)
+        preliminary = resolve_plan(message, tenant=user["org"])
+        if preliminary["intent"] in ("history", "verification", "account"):
+            import re
+            names = {"lea": "lea", "alex": "adult", "adult": "adult"}
+            named = {uid for name, uid in names.items() if re.search(r"\b" + name + r"\b", normalized(message))}
+            if len(named) > 1:
+                raise HTTPException(422, "Choisissez un seul voyageur pour la consultation")
+            if named:
+                requested = next(iter(named))
+                if traveler and traveler != requested:
+                    raise HTTPException(403, "Voyageur demandé hors du contexte sélectionné")
+                traveler = requested
         if traveler and (traveler not in USERS or USERS[traveler]["role"] != "traveler" or USERS[traveler]["org"] != user["org"] or (user["role"] == "traveler" and traveler != user["id"])):
             raise HTTPException(403, "Voyageur hors périmètre")
         if body.seller == "agency" and user["role"] not in ("clerk", "supervisor", "demo"):
@@ -58,7 +71,13 @@ def register(app, get, temporal, log):
                 traveler = order["traveler"]
                 providers = [l.get("provider", l["product"]) for l in order["quote"]["lines"]]
             message = "Commande sélectionnée et accessible : " + body.order_id + ". Question : " + message
-        context = sign_scope("maas-coordination", user, traveler=traveler, seller=body.seller, travel_date=body.travel_date.isoformat() if body.travel_date else None, order_id=body.order_id, providers=providers)
+        plan = resolve_plan(body.message, {"order_id": body.order_id, "providers": providers}, user["org"])
+        if plan.get("clarification"):
+            return {"mode": "clarification_required", "text": plan["clarification"], "proposal": None, "evidence": {"a2a_agents": [], "mcp_tools": []}, "inference": False}
+        if plan["target"] == "history" and not traveler:
+            return {"mode": "clarification_required", "text": "Quel voyageur souhaitez-vous consulter ? Sélectionnez son profil dans le poste conseiller.", "proposal": None, "evidence": {"a2a_agents": [], "mcp_tools": []}, "inference": False}
+        entry_agent = body.agent if body.agent == plan["target"] else "conversation"
+        context = sign_scope("maas-coordination", user, traveler=traveler, seller=body.seller, travel_date=body.travel_date.isoformat() if body.travel_date else None, order_id=body.order_id, providers=providers, plan=plan)
         reservation = 100 if backend == "openai_via_agno" else 0
         value = reserve(reservation) if reservation else None
         with Session.begin() as db:
@@ -66,10 +85,10 @@ def register(app, get, temporal, log):
         rid = str(uuid.uuid4())
         payload = {"jsonrpc": "2.0", "id": rid, "method": "message/send", "params": {"message": {"messageId": rid, "role": "user", "parts": [{"kind": "text", "text": message}]}}}
         activity_id = agent_activity.start(user, "Dialogue avec les agents", backend)
-        with agent_activity.exchange(activity_id, user, "A2A", "interface", body.agent):
+        with agent_activity.exchange(activity_id, user, "A2A", "interface", entry_agent):
             try:
                 async with httpx.AsyncClient(timeout=600 if backend == "ollama_local" else 180) as client:
-                    result = await client.post("http://agents:8002/a2a/agents/" + body.agent + "/v1/message:send", json=payload, headers={"Authorization": request.headers["Authorization"], "X-MaaS-Activity-ID": activity_id, "X-MaaS-Coordination": context})
+                    result = await client.post("http://agents:8002/a2a/agents/" + entry_agent + "/v1/message:send", json=payload, headers={"Authorization": request.headers["Authorization"], "X-MaaS-Activity-ID": activity_id, "X-MaaS-Coordination": context})
                     result.raise_for_status()
                     task = result.json()["result"]
                 if task["status"]["state"] != "completed" or result.headers.get("X-MaaS-Delegation-Failed") == "true":

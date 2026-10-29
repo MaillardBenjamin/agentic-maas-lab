@@ -33,7 +33,7 @@ def sign_manifest(manifest):
     return {"signature": key.sign(canonical(manifest)).hex(), "public_key": key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()}
 
 
-def anchor_batch(batch_id, batch_digest):
+def anchor_batch(batch_id, batch_digest, schema_version=1):
     manifest = json.loads(Path("/proofs/deployment.json").read_text())
     w3 = Web3(Web3.HTTPProvider(os.environ.get("ANVIL_URL", "http://anvil:8545"), request_kwargs={"timeout": 8}))
     if w3.eth.chain_id != 31337 or manifest["chain_id"] != 31337:
@@ -46,11 +46,11 @@ def anchor_batch(batch_id, batch_digest):
     previous = contract.functions.proofs(key).call()
     txhash = None
     if previous[2]:
-        if previous[0] != expected:
+        if previous[0] != expected or previous[1] != schema_version:
             raise ValueError("Conflit sur la preuve existante")
         block = previous[2]
     else:
-        tx = contract.functions.anchor(key, expected, 1).transact({"from": manifest["publisher"]})
+        tx = contract.functions.anchor(key, expected, schema_version).transact({"from": manifest["publisher"]})
         receipt = w3.eth.wait_for_transaction_receipt(tx, timeout=15)
         if receipt.status != 1:
             raise ValueError("Échec de transaction")
@@ -74,3 +74,34 @@ def with_anchor_time(proof):
         return {**proof, "chain": {**chain, "anchored_at": datetime.fromtimestamp(timestamp, timezone.utc).isoformat()}}
     except Exception:
         return proof
+
+
+def verify_record(proof):
+    """Fresh, read-only signature and contract checks. Never trusts cached verified=true."""
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    base = {"id": proof["id"], "stage": proof.get("stage", "usage_batch"), "origin": proof.get("origin", "business_transition"), "recorded_at": proof.get("recorded_at"), "checked_at": datetime.now(timezone.utc).isoformat()}
+    try:
+        if digest(proof["manifest"]) != proof["digest"]:
+            return {**base, "status": "invalid"}
+        if not proof.get("signature"):
+            return {**base, "status": "invalid" if proof["status"] == "anchored" else "failed" if proof["status"] == "failed" else "pending"}
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(proof["public_key"])).verify(bytes.fromhex(proof["signature"]), canonical(proof["manifest"]))
+    except Exception:
+        return {**base, "status": "invalid"}
+    try:
+        deployment = json.loads(Path("/proofs/deployment.json").read_text())
+        chain = proof.get("chain", {})
+        if chain and (chain.get("instance_id"), chain.get("contract")) != (deployment.get("instance_id"), deployment["address"]):
+            return {**base, "status": "deployment_changed"}
+        w3 = Web3(Web3.HTTPProvider(os.environ.get("ANVIL_URL", "http://anvil:8545"), request_kwargs={"timeout": 3}))
+        if w3.eth.chain_id != 31337 or not w3.eth.get_code(deployment["address"]):
+            return {**base, "status": "chain_unavailable"}
+        contract = w3.eth.contract(address=deployment["address"], abi=deployment["abi"])
+        found = contract.functions.proofs(bytes.fromhex(digest({"batch_id": proof["id"]}))).call()
+        if not found[2]:
+            return {**base, "status": "not_anchored"}
+        if found[0] != bytes.fromhex(proof["digest"]) or found[1] != proof["manifest"]["schema_version"]:
+            return {**base, "status": "invalid"}
+        return {**base, "status": "verified", "chain_id": 31337, "contract": deployment["address"], "block": found[2], "digest": proof["digest"], "scope": "integrity_of_recorded_content"}
+    except Exception:
+        return {**base, "status": "chain_unavailable"}

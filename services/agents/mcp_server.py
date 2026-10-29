@@ -1,6 +1,7 @@
 """Read-only MCP facade. JWT is forwarded; the API enforces object permissions."""
 import os
 import httpx
+from urllib.parse import urlencode
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_headers
 
@@ -14,6 +15,12 @@ async def api(path, body=None):
         result = await client.request("POST" if body else "GET", os.environ.get("API_URL", "http://api:8000") + "/api" + path, json=body, headers={"Authorization": auth, "X-MaaS-Coordination": headers.get("x-maas-coordination", "")})
         result.raise_for_status()
         return result.json()
+
+
+@mcp.tool
+async def read_abt_account() -> dict:
+    """Read transport account rights, monthly invoices and usages of the selected traveler. No debit or subscription."""
+    return await api("/assistant/abt")
 
 
 @mcp.tool
@@ -44,6 +51,25 @@ async def read_statement(order_id: str) -> dict:
 async def prepare_quote(products: list[str], travel_date: str) -> dict:
     """Prepare a reviewable deterministic quote for the selected traveler, without purchasing."""
     return await api("/assistant/quotes", {"products": products, "travel_date": travel_date})
+
+
+@mcp.tool
+async def list_purchases(traveler_id: str | None = None, limit: int = 10, offset: int = 0) -> dict:
+    """List authorized purchases for the authenticated/selected traveler. Never accepts another traveler's scope."""
+    params = {"limit": limit, "offset": offset, **({"traveler_id": traveler_id} if traveler_id else {})}
+    return await api("/assistant/purchases?" + urlencode(params))
+
+
+@mcp.tool
+async def read_purchase(order_id: str) -> dict:
+    """Read one purchase within the authenticated and selected traveler's scope."""
+    return await api("/assistant/purchases/" + order_id)
+
+
+@mcp.tool
+async def verify_purchase_proofs(order_id: str) -> dict:
+    """Fresh read-only verification of source data, signatures and on-chain commitments."""
+    return await api("/assistant/purchases/" + order_id + "/proofs")
 
 if __name__ == "__main__":
     mcp.run(transport="http", host="0.0.0.0", port=8003, path="/mcp")

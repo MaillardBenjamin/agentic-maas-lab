@@ -22,7 +22,7 @@ assert digest(value["manifest"]) == value["digest"]
 assert value["chain"]["chain_id"] == 31337 and value["chain"]["verified"]
 assert call("/api/proofs/" + oid, demo, {})["id"] == value["id"]
 # A real second contract read performs no second transaction.
-again = anchor_batch(value["id"], value["digest"])
+again = anchor_batch(value["id"], value["digest"], value["manifest"]["schema_version"])
 assert again["block"] == value["chain"]["block"] and again["transaction"] is None
 try:
     pub.verify(bytes.fromhex(value["signature"]), canonical({"schema_version": 1, "events": []}))

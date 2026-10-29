@@ -6,6 +6,8 @@ POC de billettique interopérable, code original sous licence MIT, porté par Be
 
 **Première version exécutable, au 24 octobre 2026.** Les réponses OpenAI et Ollama ont été testées avec la délégation A2A et les outils MCP. Le paiement Bridge sandbox de 12 € a été confirmé par Demo Bank, puis le titre délivré via Temporal et Keyple sur carte stub. Le parcours local fonctionne sans API payante. Le [plan cible](plan-implementation-poc.md) guide les évolutions suivantes.
 
+**Documentation actualisée au 29 octobre 2026 :** [index des documents](docs/README.md), [guide de démonstration](docs/guide-demonstration.md) et [exploitation et vérifications](docs/exploitation-et-verification.md). Ils couvrent les parcours actuels, dont le compte ABT, l’historique, le routage et les preuves. Les rapports datés conservent les résultats de leurs essais respectifs.
+
 Comptes rendus des essais : [validation du socle](docs/validation-2026-10-24.md), [tests OpenAI et Ollama](docs/tests-ia-locale-et-acces-2026-10-24.md), puis [paiement Bridge complet](docs/test-paiement-bridge-2026-10-24.md).
 
 La coopération avec les partenaires vélo et parking est implémentée : **agent MaaS → A2A → agent partenaire sur un runtime séparé → MCP → service simulé avec état**. Les actions sont confirmées dans l'IHM, liées à une autorisation temporaire et exécutées avec reprise Temporal. Voir [le fonctionnement et les essais partenaires](docs/partenaires-a2a-2026-10-24.md).
@@ -14,9 +16,17 @@ La transcription **audio + lèvres et lèvres seules** est intégrée à l’ass
 
 Les demandes d’information passent par les organisations responsables : **Accueil → coordinateur Tarifs → agent Parking → MCP de consultation Parking**, sans commande préalable. Disponibilité, préparation d’offre combinée, SAV et commissions suivent la même séparation des périmètres. Un devis préparé depuis le dialogue peut être examiné dans l’écran Voyageur ou Agence avant confirmation. Voir [la correction des parcours et ses validations](docs/cooperation-organisations-2026-10-28.md).
 
+Les consultations indépendantes des fournisseurs s’exécutent en parallèle, avec au plus trois appels A2A fournisseurs en cours par consultation. La synthèse attend tous les résultats. Voir [le fonctionnement et les tests de parallélisme](docs/consultations-paralleles-2026-10-29.md).
+
+Le périmètre des appels est contrôlé avant délégation : intention, services concernés et compétences déclarées. Une demande ambiguë appelle une précision. L’agent Achats peut rechercher les commandes du voyageur autorisé et vérifier leurs preuves de cycle de vie. Voir [sélection stricte, historique et preuves](docs/routage-achats-preuves-2026-10-29.md).
+
 Le panneau **Échanges en direct** montre les délégations A2A et appels MCP pendant leur exécution : agents sollicités, états et durées. Il s’ouvre lors d’une demande à l’assistant ou aux partenaires et reste accessible depuis le bouton du même nom. Actualisation toutes les 0,8 seconde, accès limité à la session et distinction explicite entre modèle réel et double de test. Voir [le fonctionnement et les essais du suivi](docs/echanges-agents-direct-2026-10-28.md).
 
 **Agence & SAV** possède un poste conseiller dédié, utilisable en **gare** ou en **centre de relation client** : recherche voyageur/référence, commandes et titres, vente accompagnée, dossiers de contact persistants, notes et régularisations selon l’habilitation. Voir [le parcours Agence et CRC](docs/poste-agence-crc-2026-10-28.md).
+
+Le **Compte mobilité ABT** rattache automatiquement les achats d’un voyageur identifié, quel que soit le canal. Il propose un abonnement annuel de 600 € en douze mensualités et un post-paiement à 2 € par trajet, plafonné à 60 € par mois, avec prélèvements simulés et consultation par les agents. Voir [les parcours, interfaces et tests ABT](docs/abt-transport-2026-10-29.md).
+
+La [revue des tests hors ABT](docs/audit-tests-hors-abt-2026-10-29.md) distingue les suites unitaires, les intégrations réellement rejouées et les lacunes restantes ; `make audit-tests` produit un inventaire reproductible.
 
 ## Comprendre l’architecture
 
@@ -33,12 +43,12 @@ make seed        # charge le catalogue fictif dans FalkorDB ; réexécutable
 make demo        # achat, émission, événements, SAV, commissions et contrôles
 ```
 
-Ouvrir **[Alizé Lab](http://127.0.0.1:5190)**. La vue **Voyageur** commence par une connexion de démonstration (Léa ou Alex), puis propose **Acheter**, **Panier**, **Mes titres**, **Mes services** et **Aide**. Voir [le nouveau parcours Voyageur et ses vérifications](docs/voyageur-ergonomie-2026-10-27.md). Le port 5190 évite le conflit avec une autre application locale sur 5173. [API Swagger](http://127.0.0.1:8000/docs), [Temporal](http://127.0.0.1:8088), [Jaeger](http://127.0.0.1:16686).
+Ouvrir **[Alizé Lab](http://127.0.0.1:5190)**. La vue **Voyageur** commence par une connexion de démonstration (Léa ou Alex), puis propose **Acheter**, **Panier**, **Compte mobilité**, **Mes titres**, **Mes services** et **Aide**. Voir [le guide courant](docs/guide-demonstration.md) et [les vérifications initiales du parcours Voyageur](docs/voyageur-ergonomie-2026-10-27.md). Le port 5190 évite le conflit avec une autre application locale sur 5173. [API Swagger](http://127.0.0.1:8000/docs), [Temporal](http://127.0.0.1:8088), [Jaeger](http://127.0.0.1:16686).
 
 Les ports publiés sont limités à `127.0.0.1`. Les identités sont des sélecteurs de démonstration, avec secrets locaux connus : conserver cet environnement en local.
 
 ```sh
-make test        # tests Python et politiques OPA
+make test        # tests Python, fonctions du frontal et politiques OPA
 make protocols   # échanges Agno/A2A/MCP, modèle de test explicite
 make proofs      # tests Solidity, Anvil, déploiement et preuve de validations
 make resilience  # arrêt brutal du Worker, signal durable, réponse carte perdue
@@ -78,14 +88,14 @@ Le frontal est responsive. La vue **Automate** possède un écran de borne dédi
 
 Les remontées X/Y et les partenaires vélo/parking partagent le registre d’événements. Les stocks et réservations sont persistés dans PostgreSQL ; un événement contradictoire est rejeté pour rapprochement.
 
-Le panneau **Périmètre du démonstrateur**, accessible dans chaque vue et ouvert par défaut dans la console, distingue les fonctions présentes, les simulations et les compléments à réaliser. Le fournisseur IA et l'activation Bridge suivent la configuration courante ; ces indications ne remplacent pas un contrôle de disponibilité. Les évolutions du dialogue et de la voix figurent dans la feuille de route.
+Le panneau **Périmètre du démonstrateur**, accessible dans chaque vue et ouvert par défaut dans la console, distingue les fonctions présentes, les simulations et les compléments à réaliser. Le fournisseur IA et l'activation Bridge suivent la configuration courante ; ces indications ne remplacent pas un contrôle de disponibilité. Le [guide de démonstration](docs/guide-demonstration.md) décrit aussi les parcours Compte mobilité, historique et preuves ; les extensions restent dans la feuille de route.
 
 ## Architecture effectivement implémentée
 
 ```mermaid
 flowchart TB
     UI["Voyageur web/mobile · automate · agence SAV · console"] --> API["FastAPI · identité locale · règles déterministes"]
-    UI -. "WebRTC après activation" .-> VOICE["OpenAI Realtime · à valider"]
+    UI -. "WebRTC · audio seul après accord" .-> VOICE["OpenAI Realtime · audio facultatif"]
     VOICE -. "outil via le navigateur" .-> API
     UI -->|"vidéo courte, consentement"| API
     API -->|"tâche privée et éphémère"| AVSR["mWhisper-Flamingo local · audio + lèvres / lèvres seules"]
@@ -96,6 +106,8 @@ flowchart TB
     API -->|A2A| CLEAR["Agent Agno commissions"]
     ACC -->|A2A| SAV
     ACC -->|A2A| CLEAR
+    ACC -->|A2A| HIST["Agent Achats · historique et compte ABT"]
+    HIST -->|MCP| MCP
     ACC -->|A2A| PREP["Coordination commerciale MaaS"]
     TAR -->|A2A| ORG["Agents Transport · Parking · Vélo"]
     SAV -->|A2A| ORG
@@ -108,6 +120,8 @@ flowchart TB
     CLEAR -->|MCP| MCP
     MCP --> API
     API --> PG[("PostgreSQL · transactions et audit")]
+    API --> ABT["Compte ABT · droits et facturation simulée"]
+    ABT --> PG
     API --> GRAPH[("FalkorDB · acteurs, grilles, sources et index")]
     API --> OPA["OPA · autorisation SAV"]
     API --> TEMP["Temporal · workflows persistants"]
@@ -118,6 +132,7 @@ flowchart TB
     PMCP -->|"autorisation temporaire vérifiée"| PAPI["API partenaires simulés · stock et réservations PostgreSQL"]
     PAPI -->|"CloudEvents · fin d'usage"| API
     TEMP --> WORKER["Worker · Activities et reprises"]
+    WORKER -->|"traitement périodique"| ABT
     WORKER --> SIM["Simulateur carte avec état SQLite"]
     SIM --> KEY["SDK Keyple réel · carte Calypso stub"]
     API -->|"Pay by Link · relecture ACSC"| BANK["Bridge Demo Bank · sandbox testée"]
@@ -159,7 +174,7 @@ make test-live-local
 
 Configuration : `AI_ENABLED=true`, `AGENT_MODE=ollama`, `OLLAMA_HOST=http://host.docker.internal:11434`, `OLLAMA_MODEL=qwen3:14b`. Sur cette machine, ce mode est laissé actif. Pour une nouvelle installation, lancer Ollama et installer préalablement un modèle compatible avec les outils ; le fichier d'exemple reste désactivé par défaut. Sur Linux, adapter l'accès au serveur local ; ce chemin réseau n'a été testé que sur Docker Desktop Mac.
 
-Le fournisseur Agno est `Ollama`, avec réflexion désactivée pour ces essais, contexte de 8 192 tokens et sortie plafonnée à 700 tokens par réponse. Les URL cloud et identifiants de modèles cloud sont refusés ; aucun basculement automatique vers OpenAI. Les demandes locales ne réservent aucun budget OpenAI. La voix reste disponible uniquement en mode OpenAI dans cette version.
+Le fournisseur Agno est `Ollama`, avec réflexion désactivée pour ces essais, contexte de 8 192 tokens et sortie plafonnée à 700 tokens par réponse. Les URL cloud et identifiants de modèles cloud sont refusés ; aucun basculement automatique vers OpenAI. Les demandes locales ne réservent aucun budget OpenAI. L’audio OpenAI est une option séparée : les agents texte peuvent rester sur Ollama pendant une session vocale activée explicitement.
 
 `AI_MONTHLY_BUDGET_EUR=50` limite des réservations conservatrices : 1 € par demande textuelle, 3 € par démarrage vocal, plus les demandes métier vocales. Elles sont sérialisées dans PostgreSQL. Ce compteur n'est ni la facture OpenAI ni une garantie absolue sur son montant ; la durée du navigateur et l'expiration d'un jeton ne constituent pas une limite fournisseur de dépense.
 

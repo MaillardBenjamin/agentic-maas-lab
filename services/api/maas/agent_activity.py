@@ -13,7 +13,7 @@ from fastapi import Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from maas.security import principal
 
-ACTORS = Literal['interface', 'conversation', 'tariffs', 'sav', 'clearing', 'mobility', 'transport', 'bike', 'parking', 'read_catalog', 'search_tariffs', 'read_order', 'read_statement', 'read_provider_context', 'prepare_quote', 'bike_availability', 'bike_apply', 'parking_availability', 'parking_apply']
+ACTORS = Literal['interface', 'conversation', 'history', 'read_abt_account', 'list_purchases', 'read_purchase', 'verify_purchase_proofs', 'tariffs', 'sav', 'clearing', 'mobility', 'transport', 'bike', 'parking', 'read_catalog', 'search_tariffs', 'read_order', 'read_statement', 'read_provider_context', 'prepare_quote', 'bike_availability', 'bike_apply', 'parking_availability', 'parking_apply']
 RUNS = {}
 EVENTS = deque(maxlen=4096)
 LOCK = threading.RLock()

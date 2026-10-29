@@ -64,7 +64,7 @@ security:
 	@trap 'docker compose start opa' EXIT; \
 	docker compose stop opa && \
 	docker compose exec -T api python scripts/security_smoke.py opa-down
-verify: test demo protocols test-cooperation test-partners test-partners-concurrency test-partners-resilience proofs resilience security lab chain-restart
+verify: test demo protocols test-cooperation test-history-routing test-abt test-agency test-budget-concurrency test-partners test-partners-concurrency test-partners-resilience proofs resilience security lab chain-restart
 	docker compose exec -T api python scripts/telemetry_smoke.py
 chain-restart:
 	docker compose exec -T api python scripts/chain_resilience.py prepare
@@ -120,3 +120,35 @@ test-cooperation:
 	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/data/cooperation-evidence:/evidence" api python scripts/cooperation_smoke.py fixture
 test-cooperation-local:
 	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/data/cooperation-evidence:/evidence" api python scripts/cooperation_smoke.py ollama
+
+.PHONY: test-parallel-consultations-local
+test-parallel-consultations-local:
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/data/cooperation-evidence:/evidence" api python scripts/parallel_consultations_smoke.py
+
+.PHONY: test-history-routing test-history-routing-local
+test-history-routing:
+	docker compose run --rm --no-deps api python -m pytest -q tests/test_routing.py tests/test_purchase_history.py
+	docker compose --profile tests up -d agent-fixture partners-fixture
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts/runtime_guard_test.py:/app/runtime_guard_test.py:ro" agents python runtime_guard_test.py
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/data/cooperation-evidence:/evidence" api python scripts/history_routing_smoke.py
+test-history-routing-local:
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/data/cooperation-evidence:/evidence" api python scripts/history_routing_smoke.py --live
+
+.PHONY: test-abt
+test-abt:
+	docker compose run --rm --no-deps api python -m pytest -q tests/test_abt.py tests/test_abt_worker.py tests/test_routing.py
+	docker compose --profile tests up -d agent-fixture partners-fixture
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" api python scripts/abt_postgres_test.py
+
+.PHONY: audit-abt test-abt-demo
+audit-abt:
+	docker compose run --rm --no-deps -v "$(CURDIR)/services/api/maas:/app/maas:ro" -v "$(CURDIR)/tests:/app/tests:ro" -v "$(CURDIR)/scripts:/app/scripts:ro" api python scripts/abt_coverage.py
+test-abt-demo:
+	docker compose --profile tests up -d agent-fixture partners-fixture
+	docker compose exec -T api python scripts/abt_smoke.py
+
+.PHONY: audit-tests test-budget-concurrency
+audit-tests:
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" -v "$(CURDIR)/tests:/app/tests:ro" -v "$(CURDIR)/data/test-audit:/evidence" api python scripts/audit_test_coverage.py
+test-budget-concurrency:
+	docker compose run --rm --no-deps -v "$(CURDIR)/scripts:/app/scripts:ro" api python scripts/budget_postgres_test.py
